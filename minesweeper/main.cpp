@@ -10,6 +10,7 @@
 #include "gpk_chrono.h"
 #include "gpk_parse.h"
 #include "gpk_base64.h"
+#include "gpk_encoding.h"
 
 GPK_CGI_JSON_APP_IMPL();
 
@@ -38,13 +39,17 @@ GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 	::gpk::array_pod<byte_t>							gameStateBytes					= {};
 	gpk_necall(gameStateBytes.append((const char*)&gameState.Board.metrics(), sizeof(::gpk::SCoord2<uint32_t>)) , "%s", "Out of memory?");
 	gpk_necall(gameStateBytes.append((const char*)gameState.Board.Texels.begin(), gameState.Board.Texels.size()), "%s", "Out of memory?");
-	gpk_necall(::gpk::fileFromMemory(fileName, gameStateBytes), "Failed to write to file '%s'.", fileName.begin());
+	::gpk::array_pod<byte_t>							rleEncoded						= {};
+	::gpk::rleEncode(gameStateBytes, rleEncoded);
+	gpk_necall(::gpk::fileFromMemory(fileName, rleEncoded), "Failed to write to file '%s'.", fileName.begin());
 	return 0;
 }
 
 ::gpk::error_t									gameStateLoad					(::btl::SMineSweeper & gameState, const ::gpk::view_const_string & fileName)	{
+	::gpk::array_pod<byte_t>							rleEncoded						= {};
+	gpk_necall(::gpk::fileToMemory(fileName, rleEncoded), "Failed to load game state file '%s'.", fileName.begin());
 	::gpk::array_pod<byte_t>							gameStateBytes					= {};
-	gpk_necall(::gpk::fileToMemory(fileName, gameStateBytes), "Failed to load game state file '%s'.", fileName.begin());
+	::gpk::rleDecode(rleEncoded, gameStateBytes);
 	ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
 	::gpk::SCoord2<uint32_t>							boardMetrics					= *(::gpk::SCoord2<uint32_t>*)gameStateBytes.begin();
 	gpk_necall(gameState.Board.resize(boardMetrics), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
@@ -124,8 +129,10 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 
 			::gpk::view_const_string						boardWidth						= {};
 			::gpk::view_const_string						boardHeigth						= {};
+			::gpk::view_const_string						mineCount						= {};
 			::gpk::find(::gpk::view_const_string{"width"	}, requestReceived.QueryStringKeyVals, boardWidth	);
 			::gpk::find(::gpk::view_const_string{"height"	}, requestReceived.QueryStringKeyVals, boardHeigth	);
+			::gpk::find(::gpk::view_const_string{"mines"	}, requestReceived.QueryStringKeyVals, mineCount	);
 			::gpk::SCoord2<uint32_t>						boardMetrics					= {};
 			::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
 			::gpk::parseIntegerDecimal(boardHeigth, &boardMetrics.y);
@@ -240,7 +247,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gameState.GetSafes(cellsSafes.View);
 	::gpk::SImage<uint8_t>								hints;
 	gpk_necall(hints.resize(gameState.Board.metrics(), 0), "%s", "");
-#define MINESWEEPER_DEBUG
+//#define MINESWEEPER_DEBUG
 #if defined(MINESWEEPER_DEBUG)
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
