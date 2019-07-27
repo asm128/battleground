@@ -35,19 +35,23 @@ GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 	return 0;
 }
 
-::gpk::error_t									gameStateSave					(::btl::SMineSweeper & gameState, const ::gpk::view_const_string & fileName)	{
+::gpk::error_t									gameStateSave					(::btl::SMineSweeper & gameState, const ::gpk::view_const_string & idGame)	{
 	::gpk::array_pod<byte_t>							gameStateBytes					= {};
 	gpk_necall(gameStateBytes.append((const char*)&gameState.Board.metrics(), sizeof(::gpk::SCoord2<uint32_t>)) , "%s", "Out of memory?");
 	gpk_necall(gameStateBytes.append((const char*)gameState.Board.Texels.begin(), gameState.Board.Texels.size()), "%s", "Out of memory?");
 	::gpk::array_pod<byte_t>							rleEncoded						= {};
 	::gpk::rleEncode(gameStateBytes, rleEncoded);
-	gpk_necall(::gpk::fileFromMemory(fileName, rleEncoded), "Failed to write to file '%s'.", fileName.begin());
+	::gpk::array_pod<char_t>							fileName						= idGame;
+	fileName.append(".bms");
+	gpk_necall(::gpk::fileFromMemory({fileName.begin(), fileName.size()}, rleEncoded), "Failed to write to file '%s'.", fileName.begin());
 	return 0;
 }
 
-::gpk::error_t									gameStateLoad					(::btl::SMineSweeper & gameState, const ::gpk::view_const_string & fileName)	{
+::gpk::error_t									gameStateLoad					(::btl::SMineSweeper & gameState, const ::gpk::view_const_string & idGame)	{
+	::gpk::array_pod<char_t>							fileName						= idGame;
+	fileName.append(".bms");
 	::gpk::array_pod<byte_t>							rleEncoded						= {};
-	gpk_necall(::gpk::fileToMemory(fileName, rleEncoded), "Failed to load game state file '%s'.", fileName.begin());
+	gpk_necall(::gpk::fileToMemory({fileName.begin(), fileName.size()}, rleEncoded), "Failed to load game state file '%s'.", fileName.begin());
 	::gpk::array_pod<byte_t>							gameStateBytes					= {};
 	::gpk::rleDecode(rleEncoded, gameStateBytes);
 	ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
