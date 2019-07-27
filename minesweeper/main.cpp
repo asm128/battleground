@@ -9,6 +9,7 @@
 #include "gpk_stdstring.h"
 #include "gpk_chrono.h"
 #include "gpk_parse.h"
+#include "gpk_base64.h"
 
 GPK_CGI_JSON_APP_IMPL();
 
@@ -21,13 +22,15 @@ GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Wipe		, 4);
 GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 
 ::gpk::error_t									gameStateId						(::gpk::array_pod<char_t> & fileName, const ::gpk::view_const_string & ip, const ::gpk::view_const_string & port)	{
-	gpk_necall(fileName.append(ip)		, "%s", "Out of memory?");
-	gpk_necall(fileName.push_back('_')	, "%s", "Out of memory?");
-	gpk_necall(fileName.append(port)	, "%s", "Out of memory?");
+	::gpk::array_pod<char_t>							temp;
+	gpk_necall(temp.append(ip)		, "%s", "Out of memory?");
+	gpk_necall(temp.push_back('_')	, "%s", "Out of memory?");
+	gpk_necall(temp.append(port)	, "%s", "Out of memory?");
 	char												nowstr[128]						= {};
 	uint64_t											now								= ::gpk::timeCurrentInUs();
 	sprintf_s(nowstr, "_%.llu", now);
-	gpk_necall(fileName.append(::gpk::view_const_string{nowstr})	, "%s", "Out of memory?");
+	gpk_necall(temp.append(::gpk::view_const_string{nowstr})	, "%s", "Out of memory?");
+	::gpk::base64EncodeFS(temp, fileName);
 	return 0;
 }
 
