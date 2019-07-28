@@ -41,6 +41,7 @@ GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 	gpk_necall(gameStateBytes.append((const char*)gameState.Board.Texels.begin(), gameState.Board.Texels.size()), "%s", "Out of memory?");
 	::gpk::array_pod<byte_t>							rleEncoded						= {};
 	::gpk::rleEncode(gameStateBytes, rleEncoded);
+	rleEncoded.append((const char*)&gameState.Time, sizeof(::gpk::SRange<uint64_t>));
 	::gpk::array_pod<char_t>							fileName						= idGame;
 	fileName.append(".bms");
 	gpk_necall(::gpk::fileFromMemory({fileName.begin(), fileName.size()}, rleEncoded), "Failed to write to file '%s'.", fileName.begin());
@@ -52,6 +53,8 @@ GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 	fileName.append(".bms");
 	::gpk::array_pod<byte_t>							rleEncoded						= {};
 	gpk_necall(::gpk::fileToMemory({fileName.begin(), fileName.size()}, rleEncoded), "Failed to load game state file '%s'.", fileName.begin());
+	gameState.Time									= *(::gpk::SRange<uint64_t>*)&rleEncoded[rleEncoded.size() - sizeof(::gpk::SRange<uint64_t>)];
+	rleEncoded.resize(rleEncoded.size() - sizeof(::gpk::SRange<uint64_t>));
 	::gpk::array_pod<byte_t>							gameStateBytes					= {};
 	::gpk::rleDecode(rleEncoded, gameStateBytes);
 	ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
@@ -268,6 +271,23 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
+
+	sprintf_s(temp, "%llu", gameState.Time.Offset);
+	gpk_necall(output.append(::gpk::view_const_string{", \"time_start\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+	if(0 < gameState.Time.Count) {
+		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
+		gpk_necall(output.append(::gpk::view_const_string{", \"time_end\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+		sprintf_s(temp, "%llu", gameState.Time.Count);
+		gpk_necall(output.append(::gpk::view_const_string{", \"play_seconds\":"}), "%s", "Out of memory?");
+	}
+	else {
+		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.Time.Offset);
+		gpk_necall(output.append(::gpk::view_const_string{", \"time_elapsed\":"}), "%s", "Out of memory?");
+	}
+	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+
 	gpk_necall(output.append(::gpk::view_const_string{", \"dead\":"})										, "%s", "Out of memory?");
 	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{", \"won\":"})										, "%s", "Out of memory?");

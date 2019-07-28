@@ -18,6 +18,7 @@ namespace btl
 
 	// Holds the board state
 	struct SMineSweeper {
+		::gpk::SRange<uint64_t>				Time			= {};
 		::gpk::SImage<SMineSweeperCell>		Board;
 
 		::gpk::error_t						GetMines		(::gpk::view_bit<uint64_t> & out_Cells)	const;

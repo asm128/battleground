@@ -1,4 +1,5 @@
 #include "btl_minesweeper.h"
+#include "gpk_chrono.h"
 
 ::gpk::error_t				btl::SMineSweeper::GetBlast	(::gpk::SCoord2<uint32_t> & out_coord)	const {
 	const ::gpk::SCoord2<uint32_t>	gridMetrix = Board.metrics();
@@ -97,10 +98,19 @@ static	::gpk::error_t				uncoverCell						(::btl::SMineSweeper & gameState, cons
 		if(false == cellData.Flag)
 			uncoverCell(*this, cell.template Cast<int32_t>());
 	}
+	if(false == cellData.Boom) {
+		::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(Board.metrics())	, "%s", "Out of memory?");
+		::gpk::SImageMonochrome<uint64_t>					cellsHides; gpk_necall(cellsHides.resize(Board.metrics())	, "%s", "Out of memory?");
+		const int32_t totalHides = GetHides(cellsHides.View);
+		const int32_t totalMines = GetMines(cellsMines.View);
+		if(totalHides <= totalMines && false == cellData.Boom)
+			Time.Count							= ::gpk::timeCurrent() - Time.Offset;
+	}
 	return cellData.Boom ? 1 : 0;
 }
 
 ::gpk::error_t						btl::SMineSweeper::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount)	{
+	Time.Offset							= ::gpk::timeCurrent();
 	gpk_necall(Board.resize(boardMetrics, {1,}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
 	for(uint32_t iMine = 0; iMine < mineCount; ++iMine) {
 		::gpk::SCoord2<uint32_t>							cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
