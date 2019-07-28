@@ -27,8 +27,8 @@ GPK_CGI_JSON_APP_IMPL();
 			return 1;
 		}
 	}
-	gpk_necall(output.append(::gpk::view_const_string{"Content-type: text/html\r\n"}), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\r\n"})						, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"Content-type: text/html\r\n"})	, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\r\n"})							, "%s", "Out of memory?");
 	static constexpr const char							page_title	[]					= "MineFront";
 	gpk_necall(output.append(::gpk::view_const_string{"<html>"})						, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{" <head>"})						, "%s", "Out of memory?");
@@ -56,27 +56,39 @@ GPK_CGI_JSON_APP_IMPL();
 		::gpk::view_const_string		boardWidth;
 		::gpk::view_const_string		boardHeight;
 		::gpk::view_const_string		boardMines;
-		::gpk::find("width"	, requestReceived.QueryStringKeyVals, boardWidth	);
-		::gpk::find("height", requestReceived.QueryStringKeyVals, boardHeight	);
-		::gpk::find("mines"	, requestReceived.QueryStringKeyVals, boardMines	);
+		::gpk::view_const_string		idGame;
+		::gpk::find("width"		, requestReceived.QueryStringKeyVals, boardWidth	);
+		::gpk::find("height"	, requestReceived.QueryStringKeyVals, boardHeight	);
+		::gpk::find("mines"		, requestReceived.QueryStringKeyVals, boardMines	);
+		::gpk::find("game_id"	, requestReceived.QueryStringKeyVals, idGame		);
 		if(boardWidth	.size()) ::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
 		if(boardHeight	.size()) ::gpk::parseIntegerDecimal(boardHeight, &boardMetrics.y);
 		if(boardMines	.size()) ::gpk::parseIntegerDecimal(boardMines, &mines);
 
 		::gpk::SJSONFile				config						= {};
-		const char						configFileName	[]			= "minefront.json";
+		const char						configFileName	[]			= "./minefront.json";
 		gpk_necall(::gpk::jsonFileRead(config, configFileName), "Failed to load configuration file: %s.", configFileName);
 		{
 			::gpk::view_const_string		backendIpString				= {};
 			::gpk::view_const_string		backendPortString			= {};
 
 			gpk_necall(::gpk::jsonExpressionResolve("mineback.http_address"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
-			gpk_necall(::gpk::jsonExpressionResolve("mineback.http_port"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
+			gpk_necall(::gpk::jsonExpressionResolve("mineback.http_port"	, config.Reader, 0, backendPortString), "Backend address not found in config file: %s.", configFileName);
 			::gpk::tcpipInitialize();
 			::gpk::SIPv4					backendAddress				= {};
 			gpk_necall(::gpk::tcpipAddress(backendIpString, {}, backendAddress), "%s", "Cannot resolve host.");
 			::gpk::array_pod<char_t>		backendResponse				= {};
-			gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", "/start", "application/json", "", backendResponse), "Cannot connect to backend service.");
+			if(idGame.size()) {
+			}
+			else {
+				char temp[1027] = {};
+				sprintf_s(temp, "/mineback.exe/start?width=%u&height=%u&mines=%u", boardMetrics.x, boardMetrics.y, mines);
+				gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", temp, "", "", backendResponse), "Cannot connect to backend service.");
+			}
+			backendResponse.push_back(0);
+			output.append(::gpk::view_const_string{"<code style=\"white-space: pre-wrap;\">"});
+			output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
+			output.append(::gpk::view_const_string{"</code>"});
 			::gpk::tcpipShutdown();
 		}
 	}

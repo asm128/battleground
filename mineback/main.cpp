@@ -83,10 +83,10 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsWhats; gpk_necall(cellsWhats.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsHides; gpk_necall(cellsHides.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	const uint32_t										totalMines		= gameState.GetMines(cellsMines.View);
-	const uint32_t										totalFlags		= gameState.GetFlags(cellsFlags.View);
-	const uint32_t										totalWhats		= gameState.GetWhats(cellsWhats.View);
-	const uint32_t										totalHides		= gameState.GetHides(cellsHides.View);
+	const uint32_t										totalMines						= gameState.GetMines(cellsMines.View);
+	const uint32_t										totalFlags						= gameState.GetFlags(cellsFlags.View);
+	const uint32_t										totalWhats						= gameState.GetWhats(cellsWhats.View);
+	const uint32_t										totalHides						= gameState.GetHides(cellsHides.View);
 	::gpk::SImage<uint8_t>								hints;
 	gpk_necall(hints.resize(gameState.Board.metrics(), 0), "%s", "");
 	gameState.GetHints(hints.View);
@@ -228,6 +228,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.append(::gpk::view_const_string{"}"}), "%s", "Out of memory?");
 	return 0;
 }
+
 ::gpk::error_t									gpk_cgi_generate_output			(::gpk::SCGIRuntimeValues & runtimeValues, ::gpk::array_pod<char_t> & output)	{
 	::srand((uint32_t)::gpk::timeCurrentInUs());
 
