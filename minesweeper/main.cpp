@@ -148,7 +148,18 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 				gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
 				return -1;
 			}
-			gameState.Start(boardMetrics);
+			const uint32_t									totalCells						= boardMetrics.x * boardMetrics.y;
+			uint32_t										countMines						= 0;
+			::gpk::parseIntegerDecimal(mineCount, &countMines);
+
+			if(0 == countMines || countMines > (totalCells / 2)) countMines
+				= (totalCells > 500) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 4
+				: (totalCells > 200) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 3
+				: (totalCells > 100) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 2
+				: (uint32_t)::gpk::max(1.0, boardMetrics.Length())
+				;
+
+			gameState.Start(boardMetrics, countMines);
 			gpk_necall(::gameStateId(strIdGame, ip, port), "%s", "Unknown error");
 			idGame										= {strIdGame.begin(), strIdGame.size()};
 			gpk_necall(::gameStateSave(gameState, idGame), "Cannot save file state. %s", "Unknown error");

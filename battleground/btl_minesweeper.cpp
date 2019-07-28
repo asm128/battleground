@@ -99,15 +99,9 @@ static	::gpk::error_t				uncoverCell						(::btl::SMineSweeper & gameState, cons
 	return cellData.Boom ? 1 : 0;
 }
 
-::gpk::error_t						btl::SMineSweeper::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics)	{
+::gpk::error_t						btl::SMineSweeper::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount)	{
 	gpk_necall(Board.resize(boardMetrics, {1,}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
-	const uint32_t										totalCells						= boardMetrics.x * boardMetrics.y;
-	const uint32_t										countMines
-		= (totalCells > 500) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 4
-		: (totalCells > 200) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 3
-		: (totalCells > 100) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 2
-		: (uint32_t)::gpk::max(1.0, boardMetrics.Length());
-	for(uint32_t iMine = 0; iMine < countMines; ++iMine) {
+	for(uint32_t iMine = 0; iMine < mineCount; ++iMine) {
 		::gpk::SCoord2<uint32_t>							cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
 		::btl::SMineSweeperCell								* mineData						= &Board[cellPosition.y][cellPosition.x];
 		while(mineData->Mine) {

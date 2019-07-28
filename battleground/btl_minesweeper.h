@@ -31,7 +31,7 @@ namespace btl
 		::gpk::error_t						Flag			(const ::gpk::SCoord2<uint32_t> cell);
 		::gpk::error_t						Hold			(const ::gpk::SCoord2<uint32_t> cell);
 		::gpk::error_t						Step			(const ::gpk::SCoord2<uint32_t> cell);
-		::gpk::error_t						Start			(const ::gpk::SCoord2<uint32_t> boardMetrics);
+		::gpk::error_t						Start			(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount);
 	};
 } // namespace
 
