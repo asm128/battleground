@@ -4,6 +4,8 @@
 #include "gpk_chrono.h"
 #include "gpk_http_client.h"
 #include "gpk_json_expression.h"
+#include "gpk_find.h"
+#include "gpk_parse.h"
 
 static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"status\" : 403, \"description\" :\"Forbidden - Available method/command combinations are: \n- GET / Start, \n- POST / Continue, \n- POST / Step, \n- POST / Flag, \n- POST / Wipe, \n- POST / Hold.\" }\r\n";
 
@@ -49,19 +51,34 @@ GPK_CGI_JSON_APP_IMPL();
 		gpk_necall(output.append(::gpk::view_const_string{"</tr>"})						, "%s", "Out of memory?");
 	}
 	else {
+		::gpk::SCoord2<uint32_t>		boardMetrics				= {10, 10};
+		uint32_t						mines						= 10;
+		::gpk::view_const_string		boardWidth;
+		::gpk::view_const_string		boardHeight;
+		::gpk::view_const_string		boardMines;
+		::gpk::find("width"	, requestReceived.QueryStringKeyVals, boardWidth	);
+		::gpk::find("height", requestReceived.QueryStringKeyVals, boardHeight	);
+		::gpk::find("mines"	, requestReceived.QueryStringKeyVals, boardMines	);
+		if(boardWidth	.size()) ::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
+		if(boardHeight	.size()) ::gpk::parseIntegerDecimal(boardHeight, &boardMetrics.y);
+		if(boardMines	.size()) ::gpk::parseIntegerDecimal(boardMines, &mines);
+
 		::gpk::SJSONFile				config						= {};
 		const char						configFileName	[]			= "minefront.json";
-		gpk_necall(::gpk::jsonFileRead(config, configFileName), "Failed to load configuraiton file: %s.", configFileName);
+		gpk_necall(::gpk::jsonFileRead(config, configFileName), "Failed to load configuration file: %s.", configFileName);
+		{
+			::gpk::view_const_string		backendIpString				= {};
+			::gpk::view_const_string		backendPortString			= {};
 
-		::gpk::view_const_string		backendIpString				= {};
-		gpk_necall(::gpk::jsonExpressionResolve("mineback.address", config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
-		gpk_necall(::gpk::jsonExpressionResolve("mineback.address", config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
-		::gpk::tcpipInitialize();
-		::gpk::SIPv4					backendAddress				= {};
-		gpk_necall(::gpk::tcpipAddress(backendIpString, {}, backendAddress), "%s", "Cannot resolve host.");
-		::gpk::array_pod<char_t>		backendResponse				= {};
-		gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", "/start", "application/json", "", backendResponse), "Cannot connect to backend service.");
-		::gpk::tcpipShutdown();
+			gpk_necall(::gpk::jsonExpressionResolve("mineback.http_address"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
+			gpk_necall(::gpk::jsonExpressionResolve("mineback.http_port"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
+			::gpk::tcpipInitialize();
+			::gpk::SIPv4					backendAddress				= {};
+			gpk_necall(::gpk::tcpipAddress(backendIpString, {}, backendAddress), "%s", "Cannot resolve host.");
+			::gpk::array_pod<char_t>		backendResponse				= {};
+			gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", "/start", "application/json", "", backendResponse), "Cannot connect to backend service.");
+			::gpk::tcpipShutdown();
+		}
 	}
 	gpk_necall(output.append(::gpk::view_const_string{"</table>"})						, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"</body>"})						, "%s", "Out of memory?");
