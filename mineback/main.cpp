@@ -50,8 +50,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 ::gpk::error_t									output_board_generate			(const ::gpk::SCoord2<uint32_t> & boardMetrics, const ::gpk::view_bit<uint64_t> & cells, ::gpk::array_pod<char_t> & output)	{
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	for(uint32_t row = 0; row < boardMetrics.y; ++row) {
-		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-		gpk_necall(output.push_back('['), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < boardMetrics.x; ++x) {
 			const bool									cell							= cells[row * boardMetrics.x + x];
 			gpk_necall(output.push_back(cell ? '1' : '0'), "%s", "Out of memory?");
@@ -62,8 +61,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 		if(row < (boardMetrics.y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
 	return 0;
 }
 
@@ -149,7 +147,8 @@ struct SMineBackOutputSymbols {
 		won												= (totalHides <= totalMines && false == blast);
 
 //#define ROWS_AS_KEYS
-	gpk_necall(output.append(::gpk::view_const_string{"{"})													, "%s", "Out of memory?");
+	gpk_necall(output.push_back('{'), "%s", "Out of memory?");	// Open main object
+
 	gpk_necall(output.append(::gpk::view_const_string{"\"game_id\":"})										, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
@@ -188,8 +187,7 @@ struct SMineBackOutputSymbols {
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hints\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	for(uint32_t row = 0; row < gameState.Board.metrics().y; ++row) {
-		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-		gpk_necall(output.push_back('['), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
 			const uint8_t										cell							= hints[row][x];
 			gpk_necall(output.push_back('0' + cell), "%s", "Out of memory?");
@@ -200,15 +198,13 @@ struct SMineBackOutputSymbols {
 		if(row < (gameState.Board.metrics().y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
 #endif
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	::SMineBackOutputSymbols								symbols;
 	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
-		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-		gpk_necall(output.push_back('['), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"\n[["}), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
 			const ::btl::SMineBackCell							cellData							= gameState.Board[y][x];
 			const uint8_t										cellHint							= hints[y][x];
@@ -223,10 +219,9 @@ struct SMineBackOutputSymbols {
 		if(y < (gameState.Board.metrics().y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
 
-	gpk_necall(output.append(::gpk::view_const_string{"}"}), "%s", "Out of memory?");
+	gpk_necall(output.push_back('}'), "%s", "Out of memory?");	// Close main object
 	return 0;
 }
 
