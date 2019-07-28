@@ -153,36 +153,70 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 
-	const ::gpk::view_const_string					symbolBoom	= "\"*\"";
+	const ::gpk::view_const_string					symbolBoom	= "\"B\"";
 	const ::gpk::view_const_string					symbolWhat	= "\"?\"";
 	const ::gpk::view_const_string					symbolFlag	= "\"!\"";
 	const ::gpk::view_const_string					symbolHide	= "\"~\"";
+	const ::gpk::view_const_string					symbolFail	= "\"i\"";
+	const ::gpk::view_const_string					symbolMine	= "\"*\"";
 	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
 		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
 		gpk_necall(output.push_back('['), "%s", "Out of memory?");
-		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
-			const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
-			const uint8_t										cellHint							= hints[y][x];
-			if(cellData.Boom)
-				gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
-			else if(cellData.Hide) {
-				if(cellData.Flag)
-					gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
-				else if(cellData.What)
-					gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
-				else
-					gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
+		if(false == blast) {
+			for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
+				const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
+				const uint8_t										cellHint							= hints[y][x];
+				if(cellData.Boom)
+					gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
+				else if(cellData.Hide) {
+					if(cellData.Flag)
+						gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
+					else if(cellData.What)
+						gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
+					else
+						gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
+				}
+				else {
+					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+					if(cellHint > 0)
+						gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
+					else
+						gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
+					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+				}
+				if(x < (gameState.Board.metrics().x - 1))
+					gpk_necall(output.push_back(','), "%s", "Out of memory?");
 			}
-			else {
-				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-				if(cellHint > 0)
-					gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
-				else
-					gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
-				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+		}
+		else {
+			for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
+				const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
+				const uint8_t									cellHint							= hints[y][x];
+				if(cellData.Boom)
+					gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
+				else if(cellData.Hide) {
+					if(cellData.Flag && false == cellData.Mine)
+						gpk_necall(output.append(symbolFail), "%s", "Out of memory?");
+					else if(cellData.Flag)
+						gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
+					else if(cellData.Mine)
+						gpk_necall(output.append(symbolMine), "%s", "Out of memory?");
+					else if(cellData.What)
+						gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
+					else
+						gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
+				}
+				else {
+					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+					if(cellHint > 0)
+						gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
+					else
+						gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
+					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+				}
+				if(x < (gameState.Board.metrics().x - 1))
+					gpk_necall(output.push_back(','), "%s", "Out of memory?");
 			}
-			if(x < (gameState.Board.metrics().x - 1))
-				gpk_necall(output.push_back(','), "%s", "Out of memory?");
 		}
 		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
 		if(y < (gameState.Board.metrics().y - 1))
