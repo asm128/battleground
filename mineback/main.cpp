@@ -45,8 +45,6 @@ GPK_CGI_JSON_APP_IMPL();
 	return gameState.Load(rleEncoded);
 }
 
-::gpk::error_t									Continue						(::btl::SMineBack & gameState)										{ (void)gameState; return 0; }
-
 static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"status\" : 403, \"description\" :\"Forbidden - Available method/command combinations are: \n- GET / Start, \n- POST / Continue, \n- POST / Step, \n- POST / Flag, \n- POST / Wipe, \n- POST / Hold.\" }\r\n";
 
 ::gpk::error_t									output_board_generate			(const ::gpk::SCoord2<uint32_t> & boardMetrics, const ::gpk::view_bit<uint64_t> & cells, ::gpk::array_pod<char_t> & output)	{
@@ -77,15 +75,72 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	return 0;
 }
 
+struct SMineBackOutputSymbols {
+	::gpk::view_const_string			Boom				= "\"B\"";
+	::gpk::view_const_string			What				= "\"?\"";
+	::gpk::view_const_string			Flag				= "\"!\"";
+	::gpk::view_const_string			Hide				= "\"~\"";
+	::gpk::view_const_string			Fail				= "\"f\"";
+	::gpk::view_const_string			Mine				= "\"*\"";
+};
+
+::gpk::error_t									output_cell						(const SMineBackOutputSymbols & symbols, const ::btl::SMineBackCell & cellData, const uint8_t cellHint, ::gpk::array_pod<char_t> & output)	{
+	if(cellData.Boom)
+		gpk_necall(output.append(symbols.Boom), "%s", "Out of memory?");
+	else if(cellData.Hide) {
+		if(cellData.Flag)
+			gpk_necall(output.append(symbols.Flag), "%s", "Out of memory?");
+		else if(cellData.What)
+			gpk_necall(output.append(symbols.What), "%s", "Out of memory?");
+		else
+			gpk_necall(output.append(symbols.Hide), "%s", "Out of memory?");
+	}
+	else {
+		gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+		if(cellHint > 0)
+			gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
+		else
+			gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
+		gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+	}
+	return 0;
+}
+
+::gpk::error_t									output_cell_ad					(const SMineBackOutputSymbols & symbols, const ::btl::SMineBackCell & cellData, const uint8_t cellHint, ::gpk::array_pod<char_t> & output)	{
+	if(cellData.Boom)
+		gpk_necall(output.append(symbols.Boom), "%s", "Out of memory?");
+	else if(cellData.Hide) {
+		if(cellData.Flag && false == cellData.Mine)
+			gpk_necall(output.append(symbols.Fail), "%s", "Out of memory?");
+		else if(cellData.Flag)
+			gpk_necall(output.append(symbols.Flag), "%s", "Out of memory?");
+		else if(cellData.Mine)
+			gpk_necall(output.append(symbols.Mine), "%s", "Out of memory?");
+		else if(cellData.What)
+			gpk_necall(output.append(symbols.What), "%s", "Out of memory?");
+		else
+			gpk_necall(output.append(symbols.Hide), "%s", "Out of memory?");
+	}
+	else {
+		gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+		if(cellHint > 0)
+			gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
+		else
+			gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
+		gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+	}
+	return 0;
+}
+
 ::gpk::error_t									output_game						(::btl::SMineBack & gameState, bool won, bool blast, const ::gpk::SCoord2<int32_t> & blastCoord, const ::gpk::view_const_char & idGame, ::gpk::array_pod<char_t> & output)	{
 	char												temp[1024]						= {};
 	::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsWhats; gpk_necall(cellsWhats.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsHolds; gpk_necall(cellsHolds.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsHides; gpk_necall(cellsHides.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
 	const uint32_t										totalMines						= gameState.GetMines(cellsMines.View);
 	const uint32_t										totalFlags						= gameState.GetFlags(cellsFlags.View);
-	const uint32_t										totalWhats						= gameState.GetWhats(cellsWhats.View);
+	const uint32_t										totalHolds						= gameState.GetHolds(cellsHolds.View);
 	const uint32_t										totalHides						= gameState.GetHides(cellsHides.View);
 	::gpk::SImage<uint8_t>								hints;
 	gpk_necall(hints.resize(gameState.Board.metrics(), 0), "%s", "");
@@ -101,36 +156,34 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 
 	sprintf_s(temp, "%llu", gameState.Time.Offset);
-	gpk_necall(output.append(::gpk::view_const_string{", \"time_start\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{",\"time_start\":"}), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	if(0 < gameState.Time.Count) {
 		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{", \"time_end\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{",\"time_end\":"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 		sprintf_s(temp, "%llu", gameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{", \"play_seconds\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{",\"play_seconds\":"}), "%s", "Out of memory?");
 	}
 	else {
 		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.Time.Offset);
-		gpk_necall(output.append(::gpk::view_const_string{", \"time_elapsed\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
 	}
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 
-	gpk_necall(output.append(::gpk::view_const_string{", \"dead\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{",\"dead\":"})										, "%s", "Out of memory?");
 	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{", \"won\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{",\"won\":"})											, "%s", "Out of memory?");
 	gpk_necall(output.append(won ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})		, "%s", "Out of memory?");
 	if(blast) {
 		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	}
-	//else
-	//	gpk_necall(output.push_back(',')																		, "%s", "Out of memory?");
-//#define MINESWEEPER_DEBUG
+#define MINESWEEPER_DEBUG
 #if defined(MINESWEEPER_DEBUG)
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"whats\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsWhats.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"holds\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsHolds.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hides\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsHides.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hints\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
@@ -152,71 +205,19 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 #endif
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
-
-	const ::gpk::view_const_string					symbolBoom	= "\"B\"";
-	const ::gpk::view_const_string					symbolWhat	= "\"?\"";
-	const ::gpk::view_const_string					symbolFlag	= "\"!\"";
-	const ::gpk::view_const_string					symbolHide	= "\"~\"";
-	const ::gpk::view_const_string					symbolFail	= "\"i\"";
-	const ::gpk::view_const_string					symbolMine	= "\"*\"";
+	::SMineBackOutputSymbols								symbols;
 	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
 		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
 		gpk_necall(output.push_back('['), "%s", "Out of memory?");
-		if(false == blast) {
-			for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
-				const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
-				const uint8_t										cellHint							= hints[y][x];
-				if(cellData.Boom)
-					gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
-				else if(cellData.Hide) {
-					if(cellData.Flag)
-						gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
-					else if(cellData.What)
-						gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
-					else
-						gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
-				}
-				else {
-					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-					if(cellHint > 0)
-						gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
-					else
-						gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
-					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-				}
-				if(x < (gameState.Board.metrics().x - 1))
-					gpk_necall(output.push_back(','), "%s", "Out of memory?");
-			}
-		}
-		else {
-			for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
-				const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
-				const uint8_t									cellHint							= hints[y][x];
-				if(cellData.Boom)
-					gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
-				else if(cellData.Hide) {
-					if(cellData.Flag && false == cellData.Mine)
-						gpk_necall(output.append(symbolFail), "%s", "Out of memory?");
-					else if(cellData.Flag)
-						gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
-					else if(cellData.Mine)
-						gpk_necall(output.append(symbolMine), "%s", "Out of memory?");
-					else if(cellData.What)
-						gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
-					else
-						gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
-				}
-				else {
-					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-					if(cellHint > 0)
-						gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
-					else
-						gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
-					gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-				}
-				if(x < (gameState.Board.metrics().x - 1))
-					gpk_necall(output.push_back(','), "%s", "Out of memory?");
-			}
+		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
+			const ::btl::SMineBackCell							cellData							= gameState.Board[y][x];
+			const uint8_t										cellHint							= hints[y][x];
+			if(false == blast)
+				::output_cell(symbols, cellData, cellHint, output);
+			else
+				::output_cell_ad(symbols, cellData, cellHint, output);
+			if(x < (gameState.Board.metrics().x - 1))
+				gpk_necall(output.push_back(','), "%s", "Out of memory?");
 		}
 		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
 		if(y < (gameState.Board.metrics().y - 1))
@@ -226,6 +227,122 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
 
 	gpk_necall(output.append(::gpk::view_const_string{"}"}), "%s", "Out of memory?");
+	return 0;
+}
+
+struct SActionResult {
+	::gpk::array_pod<char_t>						StrIdGame						;
+	::gpk::view_const_string						IdGame							;
+	bool											Blast							= false;
+	bool											Won								= false;
+	::gpk::SCoord2<int32_t>							BlastCoord						= {-1, -1};
+};
+
+::gpk::error_t									update_game						(::btl::SMineBack & gameState, ::gpk::SHTTPAPIRequest & requestReceived, ::SActionResult & actionResult, ::gpk::array_pod<char_t> & output)		{
+	::gpk::array_pod<char_t>							requestPath						= requestReceived.Path;
+	::gpk::tolower(requestPath);
+	char												temp[1024]						= {};
+	if(requestReceived.Method == ::gpk::HTTP_METHOD_GET) {
+		if(::gpk::view_const_string{"start"}		== requestPath) {
+			::gpk::view_const_string						boardWidth						= {};
+			::gpk::view_const_string						boardHeigth						= {};
+			::gpk::view_const_string						mineCount						= {};
+			::gpk::find(::gpk::view_const_string{"width"	}, requestReceived.QueryStringKeyVals, boardWidth	);
+			::gpk::find(::gpk::view_const_string{"height"	}, requestReceived.QueryStringKeyVals, boardHeigth	);
+			::gpk::find(::gpk::view_const_string{"mines"	}, requestReceived.QueryStringKeyVals, mineCount	);
+			::gpk::SCoord2<uint32_t>						boardMetrics					= {};
+			::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
+			::gpk::parseIntegerDecimal(boardHeigth, &boardMetrics.y);
+			if( false == ::gpk::in_range(boardMetrics.x, 2U, 256U)
+			 || false == ::gpk::in_range(boardMetrics.y, 2U, 256U)
+			 ) {
+				static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Invalid board size: {%u, %u}.\" }\r\n";
+				sprintf_s(temp, responseFormat, boardMetrics.x, boardMetrics.y);
+				gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+				return -1;
+			}
+			const uint32_t									totalCells						= boardMetrics.x * boardMetrics.y;
+			uint32_t										countMines						= 0;
+			::gpk::parseIntegerDecimal(mineCount, &countMines);
+
+			if(0 == countMines || countMines > (totalCells / 2)) countMines
+				= (totalCells > 500) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 4
+				: (totalCells > 200) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 3
+				: (totalCells > 100) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 2
+				: (uint32_t)::gpk::max(1.0, boardMetrics.Length())
+				;
+
+			gameState.Start(boardMetrics, countMines);
+			gpk_necall(::gameStateId(actionResult.StrIdGame, requestReceived.Ip, requestReceived.Port), "%s", "Unknown error");
+			actionResult.IdGame							= {actionResult.StrIdGame.begin(), actionResult.StrIdGame.size()};
+			gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "Cannot save file state. %s", "Unknown error");
+		}
+		else {
+			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
+			gpk_necall(output.append(requestPath)																							, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
+			return -1;
+		}
+	}
+	else {
+		::gpk::SJSONReader								requestCommands					= {};
+		if errored(::gpk::jsonParse(requestCommands, {requestReceived.ContentBody.begin(), requestReceived.ContentBody.size()})) {
+			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Content body received is not a valid application/json document. Error at position %u.\" }\r\n";
+			sprintf_s(temp, responseFormat, requestCommands.StateRead.IndexCurrentChar);
+			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+			return -1;
+		}
+
+		if errored(::gpk::jsonExpressionResolve("game_id", requestCommands, 0, actionResult.IdGame))	{
+			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - 'game_id' element not found in json document.\" }\r\n";
+			gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
+			return -1;
+		}
+
+		::gpk::view_const_string						action;
+		::gpk::view_const_string						actionCellX;
+		::gpk::view_const_string						actionCellY;
+		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve("action.name", requestCommands, 0, action)		; (void)idxCommandNode;
+		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve("action.x"	, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
+		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve("action.y"	, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
+		::gpk::SCoord2<uint32_t>						actionCellCoord						= {(uint32_t)-1, (uint32_t)-1};
+		::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
+		::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
+		::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
+		if errored(isGameFinished)	{
+			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"})	, "%s", "Out of memory?");
+			gpk_necall(output.append(actionResult.IdGame)																								, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																			, "%s", "Out of memory?");
+			return -1;
+		}
+
+		bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.Board.metrics()});
+		if(1 == isGameFinished)
+			actionResult.Blast							= true;
+		else if(2 == isGameFinished)
+			actionResult.Won							= true;
+		else {
+				 if(::gpk::view_const_string{"continue"	}	== action) {}
+			else if(::gpk::view_const_string{"flag"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Flag(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
+			else if(::gpk::view_const_string{"hold"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Hold(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
+			else if(::gpk::view_const_string{"step"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; }
+				int32_t										dead								= gameState.Step(actionCellCoord);
+				if(dead > 0)
+					actionResult.Blast										= true;
+				gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state.");
+			}
+			else {
+				gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
+				gpk_necall(output.append(requestPath)																							, "%s", "Out of memory?");
+				gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
+				return -1;
+			}
+		}
+		if(actionResult.Blast) {
+			gameState.GetBlast(actionCellCoord);
+			actionResult.BlastCoord						= actionCellCoord.template Cast<int32_t>();
+		}
+	}
 	return 0;
 }
 
@@ -246,132 +363,10 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 		}
 	}
 
-	::gpk::array_pod<char_t>							strIdGame;
-	::gpk::view_const_string							idGame;
 	::btl::SMineBack									gameState						= {};
-
-	const ::gpk::array_pod<char_t>						requestPath						= requestReceived.Path;
-	::gpk::tolower(requestPath);
-	char												temp[1024]						= {};
-
-	bool												blast							= false;
-	bool												won								= false;
-	::gpk::SCoord2<int32_t>								blastCoord						= {-1, -1};
-	if(requestReceived.Method == ::gpk::HTTP_METHOD_GET) {
-		if(::gpk::view_const_string{"start"}		== requestPath) {
-			::gpk::view_const_string						ip								= {};
-			::gpk::view_const_string						port							= {};
-			::gpk::find("REMOTE_ADDR"	, environViews, ip);
-			::gpk::find("REMOTE_IP"		, environViews, port);
-
-			::gpk::view_const_string						boardWidth						= {};
-			::gpk::view_const_string						boardHeigth						= {};
-			::gpk::view_const_string						mineCount						= {};
-			::gpk::find(::gpk::view_const_string{"width"	}, requestReceived.QueryStringKeyVals, boardWidth	);
-			::gpk::find(::gpk::view_const_string{"height"	}, requestReceived.QueryStringKeyVals, boardHeigth	);
-			::gpk::find(::gpk::view_const_string{"mines"	}, requestReceived.QueryStringKeyVals, mineCount	);
-			::gpk::SCoord2<uint32_t>						boardMetrics					= {};
-			::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
-			::gpk::parseIntegerDecimal(boardHeigth, &boardMetrics.y);
-			if( false == ::gpk::in_range(boardMetrics.x, 2U, 256U)
-			 || false == ::gpk::in_range(boardMetrics.y, 2U, 256U)
-			 ) {
-				static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Invalid board size: {%u, %u}.\" }\r\n";
-				sprintf_s(temp, responseFormat, boardMetrics.x, boardMetrics.y);
-				gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-				return -1;
-			}
-			const uint32_t									totalCells						= boardMetrics.x * boardMetrics.y;
-			uint32_t										countMines						= 0;
-			::gpk::parseIntegerDecimal(mineCount, &countMines);
-
-			if(0 == countMines || countMines > (totalCells / 2)) countMines
-				= (totalCells > 500) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 4
-				: (totalCells > 200) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 3
-				: (totalCells > 100) ? (uint32_t)::gpk::max(1.0, boardMetrics.Length()) * 2
-				: (uint32_t)::gpk::max(1.0, boardMetrics.Length())
-				;
-
-			gameState.Start(boardMetrics, countMines);
-			gpk_necall(::gameStateId(strIdGame, ip, port), "%s", "Unknown error");
-			idGame										= {strIdGame.begin(), strIdGame.size()};
-			gpk_necall(::gameStateSave(gameState, idGame), "Cannot save file state. %s", "Unknown error");
-		}
-		else {
-			static constexpr	const char					tempFormat		[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '%%.%us'.\" }\r\n";
-			char											responseFormat	[4096]			= {};
-			sprintf_s(responseFormat, tempFormat, requestPath.size());
-			sprintf_s(temp, responseFormat, requestPath.begin());
-			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-			return -1;
-		}
-	}
-	else {
-		::gpk::SJSONReader								requestCommands					= {};
-		if errored(::gpk::jsonParse(requestCommands, {requestReceived.ContentBody.begin(), requestReceived.ContentBody.size()})) {
-			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Content body received is not a valid application/json document. Error at position %u.\" }\r\n";
-			sprintf_s(temp, responseFormat, requestCommands.StateRead.IndexCurrentChar);
-			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-			return -1;
-		}
-
-		if errored(::gpk::jsonExpressionResolve("game_id", requestCommands, 0, idGame))	{
-			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - '%s' element not found in json document.\" }\r\n";
-			sprintf_s(temp, responseFormat, "game_id");
-			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-			return -1;
-		}
-
-		::gpk::view_const_string						action;
-		::gpk::view_const_string						actionCellX;
-		::gpk::view_const_string						actionCellY;
-		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve("action.name", requestCommands, 0, action)		; (void)idxCommandNode;
-		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve("action.x"	, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
-		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve("action.y"	, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
-		::gpk::SCoord2<uint32_t>						actionCellCoord						= {(uint32_t)-1, (uint32_t)-1};
-		::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
-		::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
-		::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, idGame);
-		if errored(isGameFinished)	{
-			static constexpr	const char					tempFormat		[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '%%.%us'.\" }\r\n";
-			char											responseFormat	[4096]			= {};
-			sprintf_s(responseFormat, tempFormat, idGame.size());
-			sprintf_s(temp, responseFormat, idGame.begin());
-			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-			return -1;
-		}
-
-		bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.Board.metrics()});
-		if(1 == isGameFinished)
-			blast										= true;
-		else if(2 == isGameFinished)
-			won											= true;
-		else {
-				 if(::gpk::view_const_string{"continue"	}	== action) {}
-			else if(::gpk::view_const_string{"flag"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Flag(actionCellCoord); ::gameStateSave(gameState, idGame); }
-			else if(::gpk::view_const_string{"hold"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Hold(actionCellCoord); ::gameStateSave(gameState, idGame); }
-			else if(::gpk::view_const_string{"step"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; }
-				int32_t										dead								= gameState.Step(actionCellCoord);
-				if(dead > 0)
-					blast										= true;
-				::gameStateSave(gameState, idGame);
-			}
-			else {
-				static constexpr	const char					tempFormat		[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '%%.%us'.\" }\r\n";
-				char											responseFormat	[4096]			= {};
-				sprintf_s(responseFormat, tempFormat, requestPath.size());
-				sprintf_s(temp, responseFormat, requestPath.begin());
-				gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", temp);
-				return -1;
-			}
-		}
-		if(blast) {
-			gameState.GetBlast(actionCellCoord);
-			blastCoord									= actionCellCoord.template Cast<int32_t>();
-		}
-	}
-
-	::output_game(gameState, won, blast, blastCoord, idGame, output);
+	SActionResult										actionResult					= {};
+	gpk_necall(::update_game(gameState, requestReceived, actionResult, output), "%s", "ERror");
+	::output_game(gameState, actionResult.Won, actionResult.Blast, actionResult.BlastCoord, {actionResult.StrIdGame.begin(), actionResult.StrIdGame.size()}, output);
 	if(output.size()) {
 		OutputDebugStringA(output.begin());
 		OutputDebugStringA("\n");

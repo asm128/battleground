@@ -23,7 +23,7 @@ namespace btl
 
 		::gpk::error_t						GetMines		(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of mines in the board.
 		::gpk::error_t						GetFlags		(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of flags in the board.
-		::gpk::error_t						GetWhats		(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of whats in the board.
+		::gpk::error_t						GetHolds		(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of holds in the board.
 		::gpk::error_t						GetHides		(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of hides in the board.
 		::gpk::error_t						GetHints		(::gpk::view_grid<uint8_t> & out_Cells)	const;	// These functions return the amount of hints in the board.
 		::gpk::error_t						GetBlast		(::gpk::SCoord2<uint32_t> & out_coord)	const;	// Returns 1 if blast was found, 0 if not.
