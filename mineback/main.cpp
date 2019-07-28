@@ -2,7 +2,6 @@
 
 #include "gpk_cgi_app_impl_v2.h"
 
-#include "gpk_find.h"
 #include "gpk_storage.h"
 #include "gpk_process.h"
 #include "gpk_json_expression.h"
@@ -10,17 +9,8 @@
 #include "gpk_chrono.h"
 #include "gpk_parse.h"
 #include "gpk_base64.h"
-#include "gpk_encoding.h"
 
 GPK_CGI_JSON_APP_IMPL();
-
-GDEFINE_ENUM_TYPE	(MYSWEEPER_CMD, uint8_t		);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Start		, 0);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Continue	, 1);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Step		, 2);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Flag		, 3);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, Wipe		, 4);
-GDEFINE_ENUM_VALUE	(MYSWEEPER_CMD, What		, 5);
 
 ::gpk::error_t									gameStateId						(::gpk::array_pod<char_t> & fileName, const ::gpk::view_const_string & ip, const ::gpk::view_const_string & port)	{
 	::gpk::array_pod<char_t>							temp;
@@ -87,6 +77,129 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	return 0;
 }
 
+::gpk::error_t									output_game						(::btl::SMineBack & gameState, bool won, bool blast, const ::gpk::SCoord2<int32_t> & blastCoord, const ::gpk::view_const_char & idGame, ::gpk::array_pod<char_t> & output)	{
+	char												temp[1024]						= {};
+	::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsWhats; gpk_necall(cellsWhats.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsHides; gpk_necall(cellsHides.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsSafes; gpk_necall(cellsSafes.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
+	const uint32_t										totalMines		= gameState.GetMines(cellsMines.View);
+	const uint32_t										totalFlags		= gameState.GetFlags(cellsFlags.View);
+	const uint32_t										totalWhats		= gameState.GetWhats(cellsWhats.View);
+	const uint32_t										totalHides		= gameState.GetHides(cellsHides.View);
+	const uint32_t										totalSafes		= gameState.GetSafes(cellsSafes.View);
+	::gpk::SImage<uint8_t>								hints;
+	gpk_necall(hints.resize(gameState.Board.metrics(), 0), "%s", "");
+	gameState.GetHints(hints.View);
+	if(false == won)
+		won												= (totalHides <= totalMines && false == blast);
+
+//#define ROWS_AS_KEYS
+	gpk_necall(output.append(::gpk::view_const_string{"{"})													, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\"game_id\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
+	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
+	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
+
+	sprintf_s(temp, "%llu", gameState.Time.Offset);
+	gpk_necall(output.append(::gpk::view_const_string{", \"time_start\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+	if(0 < gameState.Time.Count) {
+		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
+		gpk_necall(output.append(::gpk::view_const_string{", \"time_end\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+		sprintf_s(temp, "%llu", gameState.Time.Count);
+		gpk_necall(output.append(::gpk::view_const_string{", \"play_seconds\":"}), "%s", "Out of memory?");
+	}
+	else {
+		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.Time.Offset);
+		gpk_necall(output.append(::gpk::view_const_string{", \"time_elapsed\":"}), "%s", "Out of memory?");
+	}
+	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+
+	gpk_necall(output.append(::gpk::view_const_string{", \"dead\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{", \"won\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.append(won ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})		, "%s", "Out of memory?");
+	if(blast) {
+		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+	}
+	//else
+	//	gpk_necall(output.push_back(',')																		, "%s", "Out of memory?");
+#define MINESWEEPER_DEBUG
+#if defined(MINESWEEPER_DEBUG)
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"whats\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsWhats.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hides\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsHides.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"safes\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsSafes.View, output), "%s", "Out of memory?");
+
+
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hints\":"})	, "%s", "Out of memory?");
+	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
+
+	for(uint32_t row = 0; row < gameState.Board.metrics().y; ++row) {
+		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
+		gpk_necall(output.push_back('['), "%s", "Out of memory?");
+		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
+			const uint8_t										cell							= hints[row][x];
+			gpk_necall(output.push_back('0' + cell), "%s", "Out of memory?");
+			if(x < (gameState.Board.metrics().x - 1))
+				gpk_necall(output.push_back(','), "%s", "Out of memory?");
+		}
+		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
+		if(row < (gameState.Board.metrics().y - 1))
+			gpk_necall(output.push_back(','), "%s", "Out of memory?");
+	}
+	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
+	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
+#endif
+	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
+	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
+
+	const ::gpk::view_const_string					symbolBoom	= "\"B\"";
+	const ::gpk::view_const_string					symbolWhat	= "\"?\"";
+	const ::gpk::view_const_string					symbolFlag	= "\"!\"";
+	const ::gpk::view_const_string					symbolHide	= "\"~\"";
+	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
+		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
+		gpk_necall(output.push_back('['), "%s", "Out of memory?");
+		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
+			const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
+			const uint8_t										cellHint							= hints[y][x];
+			if(cellData.Boom)
+				gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
+			else if(cellData.Hide) {
+				if(cellData.Flag)
+					gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
+				else if(cellData.What)
+					gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
+				else
+					gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
+			}
+			else {
+				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+				if(cellHint > 0)
+					gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
+				else
+					gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
+				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
+			}
+			if(x < (gameState.Board.metrics().x - 1))
+				gpk_necall(output.push_back(','), "%s", "Out of memory?");
+		}
+		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
+		if(y < (gameState.Board.metrics().y - 1))
+			gpk_necall(output.push_back(','), "%s", "Out of memory?");
+	}
+	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
+	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
+
+	gpk_necall(output.append(::gpk::view_const_string{"}"}), "%s", "Out of memory?");
+	return 0;
+}
 ::gpk::error_t									gpk_cgi_generate_output			(::gpk::SCGIRuntimeValues & runtimeValues, ::gpk::array_pod<char_t> & output)	{
 	::srand((uint32_t)::gpk::timeCurrentInUs());
 
@@ -112,8 +225,8 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	::gpk::tolower(requestPath);
 	char												temp[1024]						= {};
 
-	bool												won								= false;
 	bool												blast							= false;
+	bool												won								= false;
 	::gpk::SCoord2<int32_t>								blastCoord						= {-1, -1};
 	if(requestReceived.Method == ::gpk::HTTP_METHOD_GET) {
 		if(::gpk::view_const_string{"start"}		== requestPath) {
@@ -229,125 +342,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 		}
 	}
 
-	::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsWhats; gpk_necall(cellsWhats.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsHides; gpk_necall(cellsHides.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsSafes; gpk_necall(cellsSafes.resize(gameState.Board.metrics())	, "%s", "Out of memory?");
-	const uint32_t										totalMines		= gameState.GetMines(cellsMines.View);
-	const uint32_t										totalFlags		= gameState.GetFlags(cellsFlags.View);
-	const uint32_t										totalWhats		= gameState.GetWhats(cellsWhats.View);
-	const uint32_t										totalHides		= gameState.GetHides(cellsHides.View);
-	const uint32_t										totalSafes		= gameState.GetSafes(cellsSafes.View);
-	::gpk::SImage<uint8_t>								hints;
-	gpk_necall(hints.resize(gameState.Board.metrics(), 0), "%s", "");
-	gameState.GetHints(hints.View);
-	if(totalHides <= totalMines && false == blast)
-		won												= true;
-
-//#define ROWS_AS_KEYS
-	gpk_necall(output.append(::gpk::view_const_string{"{"})													, "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\"game_id\":"})										, "%s", "Out of memory?");
-	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
-	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
-	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
-
-	sprintf_s(temp, "%llu", gameState.Time.Offset);
-	gpk_necall(output.append(::gpk::view_const_string{", \"time_start\":"}), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-	if(0 < gameState.Time.Count) {
-		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{", \"time_end\":"}), "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-		sprintf_s(temp, "%llu", gameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{", \"play_seconds\":"}), "%s", "Out of memory?");
-	}
-	else {
-		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.Time.Offset);
-		gpk_necall(output.append(::gpk::view_const_string{", \"time_elapsed\":"}), "%s", "Out of memory?");
-	}
-	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-
-	gpk_necall(output.append(::gpk::view_const_string{", \"dead\":"})										, "%s", "Out of memory?");
-	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{", \"won\":"})										, "%s", "Out of memory?");
-	gpk_necall(output.append(won ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})		, "%s", "Out of memory?");
-	if(blast) {
-		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
-		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-	}
-	//else
-	//	gpk_necall(output.push_back(',')																		, "%s", "Out of memory?");
-#define MINESWEEPER_DEBUG
-#if defined(MINESWEEPER_DEBUG)
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"whats\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsWhats.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hides\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsHides.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"safes\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsSafes.View, output), "%s", "Out of memory?");
-
-
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hints\":"})	, "%s", "Out of memory?");
-	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
-
-	for(uint32_t row = 0; row < gameState.Board.metrics().y; ++row) {
-		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-		gpk_necall(output.push_back('['), "%s", "Out of memory?");
-		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
-			const uint8_t										cell							= hints[row][x];
-			gpk_necall(output.push_back('0' + cell), "%s", "Out of memory?");
-			if(x < (gameState.Board.metrics().x - 1))
-				gpk_necall(output.push_back(','), "%s", "Out of memory?");
-		}
-		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
-		if(row < (gameState.Board.metrics().y - 1))
-			gpk_necall(output.push_back(','), "%s", "Out of memory?");
-	}
-	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
-#endif
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
-	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
-
-	const ::gpk::view_const_string					symbolBoom	= "\"B\"";
-	const ::gpk::view_const_string					symbolWhat	= "\"?\"";
-	const ::gpk::view_const_string					symbolFlag	= "\"!\"";
-	const ::gpk::view_const_string					symbolHide	= "\"~\"";
-	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
-		gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-		gpk_necall(output.push_back('['), "%s", "Out of memory?");
-		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
-			const ::btl::SMineBackCell						cellData							= gameState.Board[y][x];
-			const uint8_t										cellHint							= hints[y][x];
-			if(cellData.Boom)
-				gpk_necall(output.append(symbolBoom), "%s", "Out of memory?");
-			else if(cellData.Hide) {
-				if(cellData.Flag)
-					gpk_necall(output.append(symbolFlag), "%s", "Out of memory?");
-				else if(cellData.What)
-					gpk_necall(output.append(symbolWhat), "%s", "Out of memory?");
-				else
-					gpk_necall(output.append(symbolHide), "%s", "Out of memory?");
-			}
-			else {
-				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-				if(cellHint > 0)
-					gpk_necall(output.push_back('0' + cellHint)	, "%s", "Out of memory?");
-				else
-					gpk_necall(output.push_back(' ')	, "%s", "Out of memory?");
-				gpk_necall(output.push_back('"')			, "%s", "Out of memory?");
-			}
-			if(x < (gameState.Board.metrics().x - 1))
-				gpk_necall(output.push_back(','), "%s", "Out of memory?");
-		}
-		gpk_necall(output.push_back(']'), "%s", "Out of memory?");
-		if(y < (gameState.Board.metrics().y - 1))
-			gpk_necall(output.push_back(','), "%s", "Out of memory?");
-	}
-	gpk_necall(output.push_back('\n'), "%s", "Out of memory?");
-	gpk_necall(output.push_back(']')									, "%s", "Out of memory?");
-
-	gpk_necall(output.append(::gpk::view_const_string{"}"}), "%s", "Out of memory?");
+	::output_game(gameState, won, blast, blastCoord, idGame, output);
 	if(output.size()) {
 		OutputDebugStringA(output.begin());
 		OutputDebugStringA("\n");
