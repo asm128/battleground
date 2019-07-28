@@ -153,7 +153,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 
-	const ::gpk::view_const_string					symbolBoom	= "\"B\"";
+	const ::gpk::view_const_string					symbolBoom	= "\"*\"";
 	const ::gpk::view_const_string					symbolWhat	= "\"?\"";
 	const ::gpk::view_const_string					symbolFlag	= "\"!\"";
 	const ::gpk::view_const_string					symbolHide	= "\"~\"";
