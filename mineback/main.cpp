@@ -204,7 +204,7 @@ struct SMineBackOutputSymbols {
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	::SMineBackOutputSymbols								symbols;
 	for(uint32_t y = 0; y < gameState.Board.metrics().y; ++y) {
-		gpk_necall(output.append(::gpk::view_const_string{"\n[["}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < gameState.Board.metrics().x; ++x) {
 			const ::btl::SMineBackCell							cellData							= gameState.Board[y][x];
 			const uint8_t										cellHint							= hints[y][x];
@@ -237,6 +237,8 @@ struct SActionResult {
 	::gpk::array_pod<char_t>							requestPath						= requestReceived.Path;
 	::gpk::tolower(requestPath);
 	char												temp[1024]						= {};
+	::gpk::SCoord2<uint32_t>							actionCellCoord						= {(uint32_t)-1, (uint32_t)-1};
+	::gpk::view_const_string							action;
 	if(requestReceived.Method == ::gpk::HTTP_METHOD_GET) {
 		if(::gpk::view_const_string{"start"}		== requestPath) {
 			::gpk::view_const_string						boardWidth						= {};
@@ -271,6 +273,21 @@ struct SActionResult {
 			gpk_necall(::gameStateId(actionResult.StrIdGame, requestReceived.Ip, requestReceived.Port), "%s", "Unknown error");
 			actionResult.IdGame							= {actionResult.StrIdGame.begin(), actionResult.StrIdGame.size()};
 			gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "Cannot save file state. %s", "Unknown error");
+			return 0;
+		}
+		else if(::gpk::view_const_string{"action"} ==	requestPath) {
+			if errored(::gpk::find("game_id", requestReceived.QueryStringKeyVals, actionResult.IdGame))	{
+				static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - 'game_id' element not found in querystring.\" }\r\n";
+				gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
+				return -1;
+			}
+			::gpk::view_const_string						actionCellX;
+			::gpk::view_const_string						actionCellY;
+			::gpk::error_t									idxCommandNode						= ::gpk::find("name", requestReceived.QueryStringKeyVals, action)		; (void)idxCommandNode;
+			::gpk::error_t									idxActionCellX						= ::gpk::find("x"	, requestReceived.QueryStringKeyVals, actionCellX)	; (void)idxActionCellX;
+			::gpk::error_t									idxActionCellY						= ::gpk::find("y"	, requestReceived.QueryStringKeyVals, actionCellY)	; (void)idxActionCellY;
+			::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
+			::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 		}
 		else {
 			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
@@ -279,7 +296,7 @@ struct SActionResult {
 			return -1;
 		}
 	}
-	else {
+	else {	// Pick up action from POST body
 		::gpk::SJSONReader								requestCommands					= {};
 		if errored(::gpk::jsonParse(requestCommands, {requestReceived.ContentBody.begin(), requestReceived.ContentBody.size()})) {
 			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - Content body received is not a valid application/json document. Error at position %u.\" }\r\n";
@@ -287,56 +304,51 @@ struct SActionResult {
 			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 			return -1;
 		}
-
 		if errored(::gpk::jsonExpressionResolve("game_id", requestCommands, 0, actionResult.IdGame))	{
 			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - 'game_id' element not found in json document.\" }\r\n";
 			gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
 			return -1;
 		}
-
-		::gpk::view_const_string						action;
 		::gpk::view_const_string						actionCellX;
 		::gpk::view_const_string						actionCellY;
 		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve("action.name", requestCommands, 0, action)		; (void)idxCommandNode;
 		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve("action.x"	, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
 		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve("action.y"	, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
-		::gpk::SCoord2<uint32_t>						actionCellCoord						= {(uint32_t)-1, (uint32_t)-1};
 		::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
 		::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
-		::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
-		if errored(isGameFinished)	{
-			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"})	, "%s", "Out of memory?");
-			gpk_necall(output.append(actionResult.IdGame)																								, "%s", "Out of memory?");
-			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																			, "%s", "Out of memory?");
+	}
+	::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
+	if errored(isGameFinished)	{
+		gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(actionResult.IdGame)																								, "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																			, "%s", "Out of memory?");
+		return -1;
+	}
+	bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.Board.metrics()});
+	if(1 == isGameFinished)
+		actionResult.Blast							= true;
+	else if(2 == isGameFinished)
+		actionResult.Won							= true;
+	else {
+			 if(::gpk::view_const_string{"continue"	}	== action) {}
+		else if(::gpk::view_const_string{"flag"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Flag(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
+		else if(::gpk::view_const_string{"hold"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Hold(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
+		else if(::gpk::view_const_string{"step"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; }
+			int32_t										dead								= gameState.Step(actionCellCoord);
+			if(dead > 0)
+				actionResult.Blast										= true;
+			gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state.");
+		}
+		else {
+			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
+			gpk_necall(output.append(action)																								, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
 			return -1;
 		}
-
-		bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.Board.metrics()});
-		if(1 == isGameFinished)
-			actionResult.Blast							= true;
-		else if(2 == isGameFinished)
-			actionResult.Won							= true;
-		else {
-				 if(::gpk::view_const_string{"continue"	}	== action) {}
-			else if(::gpk::view_const_string{"flag"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Flag(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
-			else if(::gpk::view_const_string{"hold"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; } gameState.Hold(actionCellCoord); gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state."); }
-			else if(::gpk::view_const_string{"step"}		== action) { if(false == validCell) { output_error_invalid_cell(actionCellCoord, output); return -1; }
-				int32_t										dead								= gameState.Step(actionCellCoord);
-				if(dead > 0)
-					actionResult.Blast										= true;
-				gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state.");
-			}
-			else {
-				gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
-				gpk_necall(output.append(requestPath)																							, "%s", "Out of memory?");
-				gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
-				return -1;
-			}
-		}
-		if(actionResult.Blast) {
-			gameState.GetBlast(actionCellCoord);
-			actionResult.BlastCoord						= actionCellCoord.template Cast<int32_t>();
-		}
+	}
+	if(actionResult.Blast) {
+		gameState.GetBlast(actionCellCoord);
+		actionResult.BlastCoord						= actionCellCoord.template Cast<int32_t>();
 	}
 	return 0;
 }
