@@ -178,7 +178,7 @@ struct SMineBackOutputSymbols {
 		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	}
-#define MINESWEEPER_DEBUG
+//#define MINESWEEPER_DEBUG
 #if defined(MINESWEEPER_DEBUG)
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
@@ -237,6 +237,8 @@ struct SActionResult {
 	::gpk::array_pod<char_t>							requestPath						= requestReceived.Path;
 	::gpk::tolower(requestPath);
 	char												temp[1024]						= {};
+	::gpk::view_const_string							actionCellX;
+	::gpk::view_const_string							actionCellY;
 	::gpk::SCoord2<uint32_t>							actionCellCoord						= {(uint32_t)-1, (uint32_t)-1};
 	::gpk::view_const_string							action;
 	if(requestReceived.Method == ::gpk::HTTP_METHOD_GET) {
@@ -281,13 +283,9 @@ struct SActionResult {
 				gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
 				return -1;
 			}
-			::gpk::view_const_string						actionCellX;
-			::gpk::view_const_string						actionCellY;
 			::gpk::error_t									idxCommandNode						= ::gpk::find("name", requestReceived.QueryStringKeyVals, action)		; (void)idxCommandNode;
 			::gpk::error_t									idxActionCellX						= ::gpk::find("x"	, requestReceived.QueryStringKeyVals, actionCellX)	; (void)idxActionCellX;
 			::gpk::error_t									idxActionCellY						= ::gpk::find("y"	, requestReceived.QueryStringKeyVals, actionCellY)	; (void)idxActionCellY;
-			::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
-			::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 		}
 		else {
 			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
@@ -309,14 +307,12 @@ struct SActionResult {
 			gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
 			return -1;
 		}
-		::gpk::view_const_string						actionCellX;
-		::gpk::view_const_string						actionCellY;
 		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve("action.name", requestCommands, 0, action)		; (void)idxCommandNode;
 		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve("action.x"	, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
 		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve("action.y"	, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
-		::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
-		::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 	}
+	::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
+	::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 	::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
 	if errored(isGameFinished)	{
 		gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"})	, "%s", "Out of memory?");
