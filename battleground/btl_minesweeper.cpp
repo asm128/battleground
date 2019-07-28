@@ -28,41 +28,31 @@
 		}													\
 	}
 
-::gpk::error_t				btl::SMineBack::GetMines	(::gpk::view_bit<uint64_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Mine, total); return total; }
-::gpk::error_t				btl::SMineBack::GetFlags	(::gpk::view_bit<uint64_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Flag, total); return total; }
-::gpk::error_t				btl::SMineBack::GetWhats	(::gpk::view_bit<uint64_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].What, total); return total; }
-::gpk::error_t				btl::SMineBack::GetHides	(::gpk::view_bit<uint64_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Hide, total); return total; }
-::gpk::error_t				btl::SMineBack::GetSafes	(::gpk::view_bit<uint64_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0;
-	::gpk::SImage<uint8_t>			hints;
-	hints.resize(Board.metrics());
-	this->GetHints(hints.View);
-	ASSIGN_GRID_BOOL(0 == hints[y][x] && false == Board[y][x].Mine, total);
-	//ASSIGN_GRID_BOOL(false == Board[y][x].Hide && 0 == hints[y][x] && false == Board[y][x].Mine, total);
-	return total;
-}
+::gpk::error_t						btl::SMineBack::GetMines	(::gpk::view_bit<uint64_t> & out_Cells)	const	{ const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Mine, total); return total; }
+::gpk::error_t						btl::SMineBack::GetFlags	(::gpk::view_bit<uint64_t> & out_Cells)	const	{ const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Flag, total); return total; }
+::gpk::error_t						btl::SMineBack::GetWhats	(::gpk::view_bit<uint64_t> & out_Cells)	const	{ const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].What, total); return total; }
+::gpk::error_t						btl::SMineBack::GetHides	(::gpk::view_bit<uint64_t> & out_Cells)	const	{ const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0; ASSIGN_GRID_BOOL(Board[y][x].Hide, total); return total; }
+::gpk::error_t						btl::SMineBack::GetHints	(::gpk::view_grid<uint8_t> & out_Cells)	const	{ const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0;
+	for(int32_t y = 0; y < (int32_t)gridMetrix.y; ++y)
+	for(int32_t x = 0; x < (int32_t)gridMetrix.x; ++x) {
+		const ::btl::SMineBackCell				cellValue					= Board[y][x];
+		const uint8_t							hidden						= cellValue.Hide ? 1 : 0; (void)hidden;
+		//if(cellValue.Hide)
+		//	continue;
+		if(cellValue.Mine)
+			continue;
+		uint8_t									& out				= out_Cells[y][x]		= 0;
+		::gpk::SCoord2<int32_t>					coordToTest			= {};	// actually by making this uint32_t we could easily change all the conditions to be coordToTest.i < gridMetrix.i. However, I'm too lazy to start optimizing what's hardly the bottleneck
+		coordToTest							= {x - 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)											{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x	, y - 1	};	if(coordToTest.y >= 0)																	{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x + 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)							{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
 
-::gpk::error_t				btl::SMineBack::GetHints	(::gpk::view_grid<uint8_t> & out_Cells)	const { const ::gpk::SCoord2<uint32_t> gridMetrix = Board.metrics(); uint32_t total = 0;
-	for(int32_t y = 0; y < (int32_t)gridMetrix.y; ++y) {
-		for(int32_t x = 0; x < (int32_t)gridMetrix.x; ++x) {
-			const ::btl::SMineBackCell		cellValue			= Board[y][x];
-			const uint8_t					hidden				= cellValue.Hide ? 1 : 0; (void)hidden;
-			//if(cellValue.Hide)
-			//	continue;
-			if(cellValue.Mine)
-				continue;
-			uint8_t							& out				= out_Cells[y][x]		= 0;
-			::gpk::SCoord2<int32_t>			coordToTest			= {};
-			coordToTest					= {x - 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)											{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-			coordToTest					= {x	, y - 1	};	if(coordToTest.y >= 0)																	{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-			coordToTest					= {x + 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)							{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x - 1, y		};	if(coordToTest.x >= 0)																	{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x + 1, y		};	if(coordToTest.x < (int32_t)gridMetrix.x)												{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
 
-			coordToTest					= {x - 1, y		};	if(coordToTest.x >= 0)																	{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-			coordToTest					= {x + 1, y		};	if(coordToTest.x < (int32_t)gridMetrix.x)												{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-
-			coordToTest					= {x - 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)							{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-			coordToTest					= {x	, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)												{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-			coordToTest					= {x + 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)		{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
-		}
+		coordToTest							= {x - 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)							{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x	, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)												{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
+		coordToTest							= {x + 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)		{ if(Board[coordToTest.y][coordToTest.x].Mine) ++out; }
 	}
 	return total;
 }
