@@ -9,7 +9,7 @@ namespace btl
 #pragma pack(push, 1)	// 0.5 would be much better, but I suppose this will do as it isn't even necessary for our small struct
 	// Holds the state for a single cell
 	struct SMineBackCell {
-		bool												Hide				: 1;
+		bool												Show				: 1;
 		bool												Mine				: 1;
 		bool												Flag				: 1;
 		bool												What				: 1;
@@ -47,7 +47,7 @@ namespace btl
 		::gpk::error_t										GetMines			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of mines in the board.
 		::gpk::error_t										GetFlags			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of flags in the board.
 		::gpk::error_t										GetHolds			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of holds in the board.
-		::gpk::error_t										GetHides			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of hides in the board.
+		::gpk::error_t										GetShows			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of hides in the board.
 		::gpk::error_t										GetHints			(::gpk::view_grid<uint8_t> & out_Cells)	const;	// These functions return the amount of hints in the board.
 		::gpk::error_t										GetBlast			(::gpk::SCoord2<uint32_t> & out_coord)	const;	// Returns 1 if blast was found, 0 if not.
 
