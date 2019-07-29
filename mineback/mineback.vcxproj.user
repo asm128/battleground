@@ -3,21 +3,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>action?name=step&amp;x=39&amp;y=0&amp;game_id=X18xNTY0NDI5NjI3NDE4ODEx</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>action?name=step&amp;x=39&amp;y=0&amp;game_id=X18xNTY0NDI5NjI3NDE4ODEx</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>action?name=step&amp;x=39&amp;y=0&amp;game_id=X18xNTY0NDI5NjI3NDE4ODEx</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>action?name=step&amp;x=39&amp;y=0&amp;game_id=X18xNTY0NDI5NjI3NDE4ODEx</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

@@ -200,8 +200,10 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 			::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
 			::btl::SMineBackCell					* cellData						= 0;
 			GetCell(cellPosition, &cellData);
-			while(cellData->Mine)
+			while(cellData->Mine) {
+				cellPosition						= {rand() % boardMetrics.x, rand() % boardMetrics.y};
 				GetCell(cellPosition, &cellData);
+			}
 			cellData->Mine						= true;
 		}
 	}

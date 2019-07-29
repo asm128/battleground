@@ -47,13 +47,13 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST"};
 		gpk_necall(::gpk::environmentBlockViews(runtimeValues.EntryPointArgs.EnvironmentBlock, environViews), "%s", "If this breaks, we better know ASAP.");
 		if(0 == ::gpk::keyValVerify(environViews, "REQUEST_METHOD", allowedMethods)) {
-			gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\n"}), "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\nCache-Control: no-cache\r\n"}), "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{"\r\n"})								, "%s", "Out of memory?");
 			gpk_necall(output.append(STR_RESPONSE_METHOD_INVALID), "%s", "Out of memory?");
 			return 1;
 		}
 	}
-	gpk_necall(output.append(::gpk::view_const_string{"Content-type: text/html\r\n"})	, "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{"Content-type: text/html\r\nCache-Control: no-cache\r\n"})	, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\r\n"})							, "%s", "Out of memory?");
 	static constexpr const char							page_title	[]					= "MineFront";
 	gpk_necall(output.append(::gpk::view_const_string{"<html>"})						, "%s", "Out of memory?");
@@ -131,7 +131,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 			}
 			::gpk::SJSONReader					jsonResponse;
 			if errored(::gpk::jsonParse(jsonResponse, {backendResponse.begin(), backendResponse.size()})) {
-				output							= ::gpk::view_const_string{"Content-type: text/html\r\n\r\n <html><body>Failed to parse JSON response from backend service.</body>"};
+				output							= ::gpk::view_const_string{"Content-type: text/html\r\nCache-Control: no-cache\r\n\r\n <html><body>Failed to parse JSON response from backend service.</body>"};
 				output.append(::gpk::view_const_string{"<code>"});
 				output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
 				output.append(::gpk::view_const_string{"</code>"});

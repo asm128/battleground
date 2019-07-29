@@ -362,7 +362,7 @@ struct SActionResult {
 	bool												isCGIEnviron					= ::gpk::httpRequestInit(requestReceived, runtimeValues, true);
 	::gpk::array_obj<::gpk::TKeyValConstString>			environViews;
 	if (isCGIEnviron) {
-		gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\n"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\nCache-Control: no-cache\r\n"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"\r\n"})								, "%s", "Out of memory?");
 		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST"};
 		gpk_necall(::gpk::environmentBlockViews(runtimeValues.EntryPointArgs.EnvironmentBlock, environViews), "%s", "If this breaks, we better know ASAP.");
