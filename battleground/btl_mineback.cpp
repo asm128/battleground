@@ -178,8 +178,8 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 
 ::gpk::error_t						btl::SMineBack::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount)	{
 	GameState							= {};
-	GameState.BoardSize					= boardMetrics;
-	GameState.MineCount					= mineCount;
+	GameState.BoardSize					= {::gpk::max(3U, boardMetrics.x), ::gpk::max(3U, boardMetrics.y)};
+	GameState.MineCount					= (uint32_t)::gpk::max(2.0, ::gpk::min((double)mineCount, ((boardMetrics.x * (double)boardMetrics.y) / 4) * 3));
 	GameState.Time.Offset				= ::gpk::timeCurrent();
 	if(false == GameState.BlockBased) { // Old small model (deprecated)
 		gpk_necall(Board.resize(boardMetrics, {}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
@@ -289,8 +289,7 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 }
 
 ::gpk::error_t									btl::SMineBack::GetCell				(const ::gpk::SCoord2<uint32_t> & cellCoord, ::btl::SMineBackCell ** out_cell)			{
-	if(cellCoord.x > GameState.BoardSize.x || cellCoord.x > GameState.BoardSize.y)
-		return -1;
+	ree_if(cellCoord.x > GameState.BoardSize.x || cellCoord.y > GameState.BoardSize.y, "Invalid cell: %u, %u. Max: %u, %u.", cellCoord.x, cellCoord.y, GameState.BoardSize.x, GameState.BoardSize.y);
 	if(false == GameState.BlockBased)
 		*out_cell										= &Board[cellCoord.y][cellCoord.x];
 	else {
@@ -306,8 +305,7 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 }
 
 ::gpk::error_t									btl::SMineBack::GetCell				(const ::gpk::SCoord2<uint32_t> & cellCoord, const ::btl::SMineBackCell ** out_cell)		const	{
-	if(cellCoord.x > GameState.BoardSize.x || cellCoord.x > GameState.BoardSize.y)
-		return -1;
+	ree_if(cellCoord.x > GameState.BoardSize.x || cellCoord.y > GameState.BoardSize.y, "Invalid cell: %u, %u. Max: %u, %u.", cellCoord.x, cellCoord.y, GameState.BoardSize.x, GameState.BoardSize.y);
 	if(false == GameState.BlockBased)
 		*out_cell										= &Board[cellCoord.y][cellCoord.x];
 	else {

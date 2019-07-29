@@ -3,21 +3,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=100&amp;height=50&amp;mines=1000</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=100&amp;height=50&amp;mines=1000</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=100&amp;height=50&amp;mines=1000</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>start?width=40&amp;height=40&amp;mines=100</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>start?width=100&amp;height=50&amp;mines=1000</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

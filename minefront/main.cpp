@@ -75,7 +75,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"./minefront.exe\">"})	, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=5000 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Start game!\"/></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");
@@ -218,9 +218,9 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 			}
 			gpk_necall(output.append(::gpk::view_const_string{"\n</table>"})	, "%s", "Out of memory?");
 
-			output.append(::gpk::view_const_string{"\n<code style=\"white-space: pre-wrap;\">"});
-			output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
-			output.append(::gpk::view_const_string{"\n</code>"});
+			//output.append(::gpk::view_const_string{"\n<code style=\"white-space: pre-wrap;\">"});
+			//output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
+			//output.append(::gpk::view_const_string{"\n</code>"});
 
 			gpk_necall(output.append(::gpk::view_const_string{"\n</td>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})			, "%s", "Out of memory?");
