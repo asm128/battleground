@@ -100,17 +100,58 @@ static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const :
 	return cellData.Boom ? 1 : 0;
 }
 
+static	::gpk::SCoord2<uint32_t>	getBlockCount				(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x / blockMetrics.x + one_if(boardMetrics.x % blockMetrics.x)
+		, boardMetrics.y / blockMetrics.y + one_if(boardMetrics.y % blockMetrics.y)
+		};
+}
+
+static	::gpk::SCoord2<uint32_t>	getBlockFromCoord			(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x / blockMetrics.x
+		, boardMetrics.y / blockMetrics.y
+		};
+}
+
+static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x % blockMetrics.x
+		, boardMetrics.y % blockMetrics.y
+		};
+}
+
 ::gpk::error_t						btl::SMineBack::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount)	{
 	Time.Offset							= ::gpk::timeCurrent();
 	gpk_necall(Board.resize(boardMetrics, {1,}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
+	const ::gpk::SCoord2<uint32_t>			blockCount					= ::getBlockCount(boardMetrics, BLOCK_METRICS);
+	gpk_necall(BoardBlocks.resize(blockCount.x * blockCount.y), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
 	for(uint32_t iMine = 0; iMine < mineCount; ++iMine) {
-		::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
-		::btl::SMineBackCell					* mineData						= &Board[cellPosition.y][cellPosition.x];
-		while(mineData->Mine) {
-			cellPosition						= {rand() % boardMetrics.x, rand() % boardMetrics.y};
-			mineData							= &Board[cellPosition.y][cellPosition.x];
+		{ // Old small model (deprecated)
+			::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
+			::btl::SMineBackCell					* mineData						= &Board[cellPosition.y][cellPosition.x];
+			while(mineData->Mine) {
+				cellPosition						= {rand() % boardMetrics.x, rand() % boardMetrics.y};
+				mineData							= &Board[cellPosition.y][cellPosition.x];
+			}
+			mineData->Mine						= true;
 		}
-		mineData->Mine						= true;
+		{ // Block-based model
+			::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
+			::gpk::SCoord2<uint32_t>				cellBlock						= getBlockFromCoord(cellPosition, BLOCK_METRICS);
+			cellPosition						= getLocalCoordFromCoord(cellPosition, BLOCK_METRICS);
+			uint32_t								blockIndex						= cellBlock.y * BLOCK_METRICS.x + cellBlock.x;
+			BoardBlocks[blockIndex]->resize(BLOCK_METRICS);
+			::btl::SMineBackCell					* mineData						= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
+			while(mineData->Mine) {
+				cellPosition						= {rand() % boardMetrics.x, rand() % boardMetrics.y};
+				cellBlock							= getBlockFromCoord(cellPosition, BLOCK_METRICS);
+				cellPosition						= getLocalCoordFromCoord(cellPosition, BLOCK_METRICS);
+				blockIndex							= cellBlock.y * BLOCK_METRICS.x + cellBlock.x;
+				mineData							= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
+			}
+			mineData->Mine						= true;
+		}
 	}
 	return 0;
 }

@@ -167,7 +167,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 			// -- Build the board
 			gpk_necall(output.append(::gpk::view_const_string{"\n<table style=\"border-style:inset;border-color:lightgray;border-width:1px;\">"}), "%s", "Out of memory?");
 			char								tempCoord	[64]			= {};
-			char								tempScript [4096]			= {};
+			char								tempScript	[4096]			= {};
 			::gpk::array_pod<char_t>			strGameId					= idGame;
 			strGameId.push_back(0);
 			::gpk::array_pod<char_t>			b64Encoded					= {};
