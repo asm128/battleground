@@ -132,7 +132,7 @@ struct SMineBackOutputSymbols {
 
 ::gpk::error_t									output_game						(::btl::SMineBack & gameState, bool won, bool blast, const ::gpk::SCoord2<int32_t> & blastCoord, const ::gpk::view_const_char & idGame, ::gpk::array_pod<char_t> & output)	{
 	char												temp[1024]						= {};
-	const ::gpk::SCoord2<uint32_t>						boardMetrics					= gameState.GameState.BlockBased ? gameState.GameState.BlockSize : gameState.Board.metrics();
+	const ::gpk::SCoord2<uint32_t>						boardMetrics					= gameState.GameState.BlockBased ? gameState.GameState.BoardSize : gameState.Board.metrics();
 
 	::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(boardMetrics)	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(boardMetrics)	, "%s", "Out of memory?");
@@ -326,7 +326,7 @@ struct SActionResult {
 		gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																			, "%s", "Out of memory?");
 		return -1;
 	}
-	bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.GameState.BlockBased ? gameState.GameState.BlockSize : gameState.Board.metrics()});
+	bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.GameState.BlockBased ? gameState.GameState.BoardSize : gameState.Board.metrics()});
 	if(1 == isGameFinished)
 		actionResult.Blast							= true;
 	else if(2 == isGameFinished)
