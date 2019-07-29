@@ -118,7 +118,12 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 			if(false == GameState.BlockBased)
 				gpk_necall(::uncoverCell(Board.View, hints.View, {}, cellCoord.Cast<int32_t>()), "%s", "Out of memory?");
 			else {
-
+				const ::gpk::SCoord2<uint32_t>			cellBlock						= getBlockFromCoord		(cellCoord, GameState.BlockSize);
+				const ::gpk::SCoord2<uint32_t>			cellPosition					= getLocalCoordFromCoord(cellCoord, GameState.BlockSize);
+				uint32_t								blockIndex						= cellBlock.y * GameState.BlockSize.x + cellBlock.x;
+				if(0 == BoardBlocks[blockIndex])
+					gpk_necall(BoardBlocks[blockIndex]->resize(GameState.BlockSize), "%s", "Out of memory?");
+				gpk_necall(::uncoverCell(BoardBlocks[blockIndex]->View, hints.View, {cellBlock.x * GameState.BlockSize.x, cellBlock.y * GameState.BlockSize.y}, cellCoord.Cast<int32_t>()), "%s", "Out of memory?");
 			}
 		}
 		if(false == cellData->Boom) {	// Check if we won after uncovering the cell(s)
