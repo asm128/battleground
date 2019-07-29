@@ -134,6 +134,9 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 				output							= "Content-type: text/html\r\n\r\n <html><body>Failed to parse JSON response from backend service.</body></html>";
 				return -1;
 			}
+			if(0 == idGame.size())
+				gpk_necall(::gpk::jsonExpressionResolve("game_id", jsonResponse, 0, idGame), "%s", "time_elapsed not found in backend response.");
+
 			::gpk::view_const_string			strBoard					= {};
 			::gpk::error_t						boardNode					= ::gpk::jsonExpressionResolve("board", jsonResponse, 0, strBoard);
 			gpk_necall(boardNode, "%s", "time_elapsed not found in backend response.");
@@ -159,8 +162,10 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 
 			// -- Build the board
 			gpk_necall(output.append(::gpk::view_const_string{"\n<table style=\"border-style:inset;border-color:lightgray;border-width:1px;\">"}), "%s", "Out of memory?");
-			char								tempCoord	[64]				= {};
-			char								tempScript [1024]			= {};
+			char								tempCoord	[64]			= {};
+			char								tempScript [4096]			= {};
+			::gpk::array_pod<char_t>			strGameId					= idGame;
+			strGameId.push_back(0);
 			::gpk::array_pod<char_t>			b64Encoded					= {};
 			for(int32_t iRow = 0; iRow < boardHeight; ++iRow) {
 				gpk_necall(output.append(::gpk::view_const_string{"\n<tr style=\"border-style:none;border-color:black;border-width:0px;\">"}), "%s", "Out of memory?");
@@ -171,7 +176,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 					sprintf_s(tempCoord, "%0.3u%0.3u", iColumn, iRow);
 					::gpk::base64EncodeFS(::gpk::view_const_string{tempCoord}, b64Encoded);
 					b64Encoded.push_back(0);
-					sprintf_s(tempScript, "\n<input type=\"submit\" id=\"%s\" onclick=\"cellClick('%s')\" onmouseout=\"cellOut('%s')\" onmouseover=\"cellOver('%s')\" ", b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin());
+					sprintf_s(tempScript, "\n<form style=\"padding:0px; margin:0px; width:16px; height:16px; \" method=\"POST\" action=\"http://201.235.131.233/minefront.exe/action?name=step&x=%u&y=%u&game_id=%s\"><input type=\"submit\" id=\"%s\" onclick=\"cellClick('%s')\" onmouseout=\"cellOut('%s')\" onmouseover=\"cellOver('%s')\" ", iColumn, iRow, strGameId.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin());
 					gpk_necall(output.append(::gpk::view_const_string{tempScript}), "%s", "Out of memory?");
 					if('~' == jsonResponse.View[cellNode][0])
 						gpk_necall(output.append(::gpk::view_const_string{"style=\"text-color:lightgray;border-style:outset;background-color:lightgray;border-width:1px; width:16px; height:16px; text-align:center;\" value=\""}), "%s", "Out of memory?");
@@ -200,20 +205,18 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 					b64Encoded.clear();
 					if('~' != jsonResponse.View[cellNode][0])
 						gpk_necall(output.append(jsonResponse.View[cellNode]), "%s", "Out of memory?");
-					gpk_necall(output.append(::gpk::view_const_string{"\" />"}), "%s", "Out of memory?");
-					//gpk_necall(output.append(jsonResponse.View[cellNode]), "%s", "Out of memory?");
-
+					gpk_necall(output.append(::gpk::view_const_string{"\" /></form>"}), "%s", "Out of memory?");
 					gpk_necall(output.append(::gpk::view_const_string{"\n</td>"})	, "%s", "Out of memory?");
+					OutputDebugStringA(output.begin());
+					//"/action?name=hold&x=0&y=0&game_id=MjAxLjIzNS4xMzEuMjMzX18xNTY0MzM1ODM5NDkyNDg5"
 				}
 				gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})	, "%s", "Out of memory?");
 			}
 			gpk_necall(output.append(::gpk::view_const_string{"\n</table>"})	, "%s", "Out of memory?");
 
-
 			output.append(::gpk::view_const_string{"\n<code style=\"white-space: pre-wrap;\">"});
 			output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
 			output.append(::gpk::view_const_string{"\n</code>"});
-
 
 			gpk_necall(output.append(::gpk::view_const_string{"\n</td>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})			, "%s", "Out of memory?");
