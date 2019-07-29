@@ -72,10 +72,10 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 	if(0 == requestReceived.QueryString.size()) { // Just print the main form.
 		gpk_necall(output.append(::gpk::view_const_string{" <tr>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <td>"})						, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"./minefront.exe\">"})	, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"./minefronte.exe\">"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=100 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Start game!\"/></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");
@@ -180,7 +180,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 					sprintf_s(tempCoord, "%0.3u%0.3u", iColumn, iRow);
 					::gpk::base64EncodeFS(::gpk::view_const_string{tempCoord}, b64Encoded);
 					b64Encoded.push_back(0);
-					sprintf_s(tempScript, "\n<form style=\"padding:0px; margin:0px; width:16px; height:16px; \" method=\"POST\" action=\"http://201.235.131.233/minefront.exe/action?name=step&x=%u&y=%u&game_id=%s\"><input type=\"submit\" id=\"%s\" onclick=\"cellClick('%s')\" onmouseout=\"cellOut('%s')\" onmouseover=\"cellOver('%s')\" ", iColumn, iRow, strGameId.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin());
+					sprintf_s(tempScript, "\n<form style=\"padding:0px; margin:0px; width:16px; height:16px; \" method=\"POST\" action=\"http://201.235.131.233/minefronte.exe/action?name=step&x=%u&y=%u&game_id=%s\"><input type=\"submit\" id=\"%s\" onclick=\"cellClick('%s')\" onmouseout=\"cellOut('%s')\" onmouseover=\"cellOver('%s')\" ", iColumn, iRow, strGameId.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin(), b64Encoded.begin());
 					gpk_necall(output.append(::gpk::view_const_string{tempScript}), "%s", "Out of memory?");
 					if('~' == jsonResponse.View[cellNode][0])
 						gpk_necall(output.append(::gpk::view_const_string{"style=\"text-color:lightgray;border-style:outset;background-color:lightgray;border-width:1px; width:16px; height:16px; text-align:center;\" value=\""}), "%s", "Out of memory?");

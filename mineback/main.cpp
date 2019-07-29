@@ -135,16 +135,9 @@ struct SMineBackOutputSymbols {
 	const ::gpk::SCoord2<uint32_t>						boardMetrics					= gameState.GameState.BlockBased ? gameState.GameState.BoardSize : gameState.Board.metrics();
 
 	::gpk::SImageMonochrome<uint64_t>					cellsMines; gpk_necall(cellsMines.resize(boardMetrics)	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(boardMetrics)	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>					cellsHolds; gpk_necall(cellsHolds.resize(boardMetrics)	, "%s", "Out of memory?");
 	::gpk::SImageMonochrome<uint64_t>					cellsShows; gpk_necall(cellsShows.resize(boardMetrics)	, "%s", "Out of memory?");
 	const uint32_t										totalMines						= gameState.GetMines(cellsMines.View);
-	const uint32_t										totalFlags						= gameState.GetFlags(cellsFlags.View);
-	const uint32_t										totalHolds						= gameState.GetHolds(cellsHolds.View);
 	const uint32_t										totalShows						= gameState.GetShows(cellsShows.View);
-	::gpk::SImage<uint8_t>								hints;
-	gpk_necall(hints.resize(boardMetrics, 0), "%s", "");
-	gameState.GetHints(hints.View);
 	if(false == won)
 		won												= ((boardMetrics.x * boardMetrics.y - totalShows) <= totalMines && false == blast);
 
@@ -183,8 +176,15 @@ struct SMineBackOutputSymbols {
 		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	}
+	::gpk::SImage<uint8_t>								hints;
+	gpk_necall(hints.resize(boardMetrics, 0), "%s", "");
+	gameState.GetHints(hints.View);
 //#define MINESWEEPER_DEBUG
 #if defined(MINESWEEPER_DEBUG)
+	::gpk::SImageMonochrome<uint64_t>					cellsFlags; gpk_necall(cellsFlags.resize(boardMetrics)	, "%s", "Out of memory?");
+	::gpk::SImageMonochrome<uint64_t>					cellsHolds; gpk_necall(cellsHolds.resize(boardMetrics)	, "%s", "Out of memory?");
+	const uint32_t										totalFlags						= gameState.GetFlags(cellsFlags.View);
+	const uint32_t										totalHolds						= gameState.GetHolds(cellsHolds.View);
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsMines.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsFlags.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"holds\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsHolds.View, output), "%s", "Out of memory?");
