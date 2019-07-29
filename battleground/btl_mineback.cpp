@@ -74,15 +74,23 @@ static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<ui
 		uint8_t									& out				= out_Cells[y][x]		= 0;
 		::gpk::SCoord2<int32_t>					coordToTest			= {};	// actually by making this uint32_t we could easily change all the conditions to be coordToTest.i < gridMetrix.i. However, I'm too lazy to start optimizing what's hardly the bottleneck
 		const ::btl::SMineBackCell				* cellValueToTest	= 0;
-		coordToTest	= {x - 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x	, y - 1	};	if(coordToTest.y >= 0)																{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x + 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x - 1, y		};	if(coordToTest.x >= 0)																{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x + 1, y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x - 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x	, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
-		coordToTest	= {x + 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest)) if(0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x - 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x	, y - 1	};	if(coordToTest.y >= 0)																{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x + 1, y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x - 1, y		};	if(coordToTest.x >= 0)																{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x + 1, y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x - 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x	, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
+		coordToTest	= {x + 1, y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ if(-1 != GetCell(coordToTest.Cast<uint32_t>(), &cellValueToTest) && 0 != cellValueToTest && cellValueToTest->Mine) ++out; }
 	}
+	return 0;
+}
+
+static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell> & board, const ::gpk::view_grid<uint8_t> & hints, const ::gpk::SCoord2<uint32_t> & hintsOffset, const ::gpk::SCoord2<int32_t> cell);
+static	::gpk::error_t				uncoverCellIfNeeded				(::gpk::view_grid<::btl::SMineBackCell> & board, const ::gpk::view_grid<uint8_t> & hints, const ::gpk::SCoord2<uint32_t> & hintsOffset, const ::gpk::SCoord2<int32_t> cellCoord) {
+	const ::btl::SMineBackCell				cellToTest						= board[cellCoord.y][cellCoord.x];
+	if(false == cellToTest.Mine && false == cellToTest.Show)
+		::uncoverCell(board, hints, hintsOffset, cellCoord);
 	return 0;
 }
 
@@ -92,14 +100,14 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 	const ::gpk::SCoord2<uint32_t>			gridMetrix						= board.metrics();
 	if(0 == hints[hintsOffset.y + cell.y][hintsOffset.x + cell.x]) {
 		::gpk::SCoord2<int32_t>					coordToTest						= {};	// actually by making this uint32_t we could easily change all the conditions to be coordToTest.i < gridMetrix.i. However, I'm too lazy to start optimizing what's hardly the bottleneck
-		coordToTest	= {cell.x - 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x	 , cell.y - 1	};	if(coordToTest.y >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x + 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x - 1, cell.y		};	if(coordToTest.x >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x + 1, cell.y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x - 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x	 , cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
-		coordToTest	= {cell.x + 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(board, hints, hintsOffset, coordToTest), "%s", "Out of memory?"); }
+		coordToTest	= {cell.x - 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x	 , cell.y - 1	};	if(coordToTest.y >= 0)																{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x + 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x - 1, cell.y		};	if(coordToTest.x >= 0)																{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x + 1, cell.y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x - 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x	 , cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
+		coordToTest	= {cell.x + 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ ::uncoverCellIfNeeded(board, hints, hintsOffset, coordToTest); } else {}
 	}
 	return 0;
 }
