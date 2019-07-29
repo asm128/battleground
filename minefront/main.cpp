@@ -73,9 +73,9 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 		gpk_necall(output.append(::gpk::view_const_string{" <tr>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <td>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"./minefront.exe\">"})	, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=256 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=256 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=256 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=20 value=10 /></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Start game!\"/></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");
@@ -131,7 +131,11 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 			}
 			::gpk::SJSONReader					jsonResponse;
 			if errored(::gpk::jsonParse(jsonResponse, {backendResponse.begin(), backendResponse.size()})) {
-				output							= "Content-type: text/html\r\n\r\n <html><body>Failed to parse JSON response from backend service.</body></html>";
+				output							= ::gpk::view_const_string{"Content-type: text/html\r\n\r\n <html><body>Failed to parse JSON response from backend service.</body>"};
+				output.append(::gpk::view_const_string{"<code>"});
+				output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
+				output.append(::gpk::view_const_string{"</code>"});
+				output.append(::gpk::view_const_string{"</html>"});
 				return -1;
 			}
 			if(0 == idGame.size())
@@ -207,7 +211,7 @@ static const ::gpk::view_const_string			javaScriptCode					= {
 						gpk_necall(output.append(jsonResponse.View[cellNode]), "%s", "Out of memory?");
 					gpk_necall(output.append(::gpk::view_const_string{"\" /></form>"}), "%s", "Out of memory?");
 					gpk_necall(output.append(::gpk::view_const_string{"\n</td>"})	, "%s", "Out of memory?");
-					OutputDebugStringA(output.begin());
+					//OutputDebugStringA(output.begin());
 					//"/action?name=hold&x=0&y=0&game_id=MjAxLjIzNS4xMzEuMjMzX18xNTY0MzM1ODM5NDkyNDg5"
 				}
 				gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})	, "%s", "Out of memory?");

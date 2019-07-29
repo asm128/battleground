@@ -158,6 +158,9 @@ struct SMineBackOutputSymbols {
 	gpk_necall(output.append(::gpk::view_const_string{",\"time_start\":"}), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	if(0 < gameState.Time.Count) {
+		sprintf_s(temp, "%llu", gameState.Time.Count);
+		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
 		gpk_necall(output.append(::gpk::view_const_string{",\"time_end\":"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
