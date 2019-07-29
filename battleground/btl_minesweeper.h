@@ -41,6 +41,9 @@ namespace btl
 		::gpk::array_obj<::gpk::ptr_obj<::gpk::SImage<::btl::SMineBackCell>>>
 															BoardBlocks			;
 
+		::gpk::error_t										GetCell				(const ::gpk::SCoord2<uint32_t> & cellCoord, ::btl::SMineBackCell ** out_cell);					// These functions return the cell
+		::gpk::error_t										GetCell				(const ::gpk::SCoord2<uint32_t> & cellCoord, const ::btl::SMineBackCell ** out_cell)	const;	// These functions return the cell
+
 		::gpk::error_t										GetMines			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of mines in the board.
 		::gpk::error_t										GetFlags			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of flags in the board.
 		::gpk::error_t										GetHolds			(::gpk::view_bit<uint64_t> & out_Cells)	const;	// These functions return the amount of holds in the board.
