@@ -15,14 +15,29 @@ namespace btl
 		bool												What				: 1;
 		bool												Boom				: 1;
 	};
+
+	struct SMineBackState {
+		::gpk::SRange<uint64_t>								Time				= {};
+		::gpk::SCoord2<uint32_t>							BlastCoord			= {(uint32_t)-1, (uint32_t)-1};
+		::gpk::SCoord2<uint32_t>							BoardSize			= {32, 32};	// Note that it's quite easy to hit stack overflow with more than 20 x 20 cells per block
+		::gpk::SCoord2<uint32_t>							BlockSize			= {16, 16};	// Note that it's quite easy to hit stack overflow with more than 20 x 20 cells per block
+		uint32_t											MineCount			= 10;
+		//char												PlayerId[127]		= {};
+		bool												Blast				: 1;
+		bool												BlockBased			: 1;
+
+															SMineBackState		() : Blast(false), BlockBased(false) {}		// it's faster to initialize these now than check if they're false by default
+	};
+
+	//static constexpr const size_t asdsasdasdjnwlef = sizeof(SMineBackState);
 #pragma pack(pop)
 
 	// Holds the board state
 	struct SMineBack {
-		::gpk::SRange<uint64_t>								Time				= {};
 		::gpk::SImage<::btl::SMineBackCell>					Board				;
+		::btl::SMineBackState								GameState			= {};
 
-		static constexpr	const ::gpk::SCoord2<uint32_t>	BLOCK_METRICS		= {16, 16};	// Note that it's quite easy to hit stack overflow with more than 20 x 20 cells per block
+
 		::gpk::array_obj<::gpk::ptr_obj<::gpk::SImage<::btl::SMineBackCell>>>
 															BoardBlocks			;
 

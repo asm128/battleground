@@ -2,14 +2,37 @@
 #include "gpk_chrono.h"
 #include "gpk_encoding.h"
 
+static	::gpk::SCoord2<uint32_t>	getBlockCount				(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x / blockMetrics.x + one_if(boardMetrics.x % blockMetrics.x)
+		, boardMetrics.y / blockMetrics.y + one_if(boardMetrics.y % blockMetrics.y)
+		};
+}
+
+static	::gpk::SCoord2<uint32_t>	getBlockFromCoord			(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x / blockMetrics.x
+		, boardMetrics.y / blockMetrics.y
+		};
+}
+
+static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
+	return
+		{ boardMetrics.x % blockMetrics.x
+		, boardMetrics.y % blockMetrics.y
+		};
+}
+
 ::gpk::error_t						btl::SMineBack::GetBlast	(::gpk::SCoord2<uint32_t> & out_coord)	const {
-	const ::gpk::SCoord2<uint32_t>	gridMetrix = Board.metrics();
-	for(uint32_t y = 0; y < gridMetrix.y; ++y) {
-		for(uint32_t x = 0; x < gridMetrix.x; ++x) {
-			const uint8_t					value						=	Board[y][x].Boom ? 1 : 0;
-			if(value > 0) {
-				out_coord					= {x, y};
-				return 1;
+	if(false == GameState.BlockBased) {
+		const ::gpk::SCoord2<uint32_t>	gridMetrix = Board.metrics();
+		for(uint32_t y = 0; y < gridMetrix.y; ++y) {
+			for(uint32_t x = 0; x < gridMetrix.x; ++x) {
+				const uint8_t							value						=	Board[y][x].Boom ? 1 : 0;
+				if(value > 0) {
+					out_coord							= {x, y};
+					return 1;
+				}
 			}
 		}
 	}
@@ -58,7 +81,7 @@
 }
 
 static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const ::gpk::SCoord2<int32_t> cell) {
-	::gpk::view_grid<::btl::SMineBackCell> board							= gameState.Board.View;
+	::gpk::view_grid<::btl::SMineBackCell>	board							= gameState.Board.View;
 	board[cell.y][cell.x].Hide			= false;
 
 	const ::gpk::SCoord2<uint32_t>			gridMetrix						= board.metrics();
@@ -80,54 +103,52 @@ static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const :
 	return 0;
 }
 
-::gpk::error_t						btl::SMineBack::Flag			(const ::gpk::SCoord2<uint32_t> cell)	{ ::btl::SMineBackCell & cellData = Board[cell.y][cell.x]; if(cellData.Hide) { cellData.Flag = !cellData.Flag; cellData.What = false; } return 0; }
-::gpk::error_t						btl::SMineBack::Hold			(const ::gpk::SCoord2<uint32_t> cell)	{ ::btl::SMineBackCell & cellData = Board[cell.y][cell.x]; if(cellData.Hide) { cellData.What = !cellData.What; cellData.Flag = false; } return 0; }
-::gpk::error_t						btl::SMineBack::Step			(const ::gpk::SCoord2<uint32_t> cell)	{ ::btl::SMineBackCell & cellData = Board[cell.y][cell.x];
+::gpk::error_t						btl::SMineBack::Flag			(const ::gpk::SCoord2<uint32_t> cellCoord)	{ ::btl::SMineBackCell & cellData = Board[cellCoord.y][cellCoord.x]; if(cellData.Hide) { cellData.Flag = !cellData.Flag; cellData.What = false; } return 0; }
+::gpk::error_t						btl::SMineBack::Hold			(const ::gpk::SCoord2<uint32_t> cellCoord)	{ ::btl::SMineBackCell & cellData = Board[cellCoord.y][cellCoord.x]; if(cellData.Hide) { cellData.What = !cellData.What; cellData.Flag = false; } return 0; }
+::gpk::error_t						btl::SMineBack::Step			(const ::gpk::SCoord2<uint32_t> cellCoord)	{ ::btl::SMineBackCell & cellData = Board[cellCoord.y][cellCoord.x];
 	if(cellData.Hide) {
 		if(cellData.Mine && false == cellData.Flag)
 			cellData.Boom						= true;
 		if(false == cellData.Flag)
-			gpk_necall(::uncoverCell(*this, cell.template Cast<int32_t>()), "%s", "Out of memory?");
-	}
-	if(false == cellData.Boom) {
-		::gpk::SImageMonochrome<uint64_t>		cellsMines; gpk_necall(cellsMines.resize(Board.metrics()), "%s", "Out of memory?");
-		::gpk::SImageMonochrome<uint64_t>		cellsHides; gpk_necall(cellsHides.resize(Board.metrics()), "%s", "Out of memory?");
-		const int32_t							totalHides						= GetHides(cellsHides.View);
-		const int32_t							totalMines						= GetMines(cellsMines.View);
-		if(totalHides <= totalMines && false == cellData.Boom)
-			Time.Count							= ::gpk::timeCurrent() - Time.Offset;
+			gpk_necall(::uncoverCell(*this, cellCoord.Cast<int32_t>()), "%s", "Out of memory?");
+
+		if(false == cellData.Boom) {	// Check if we won after uncovering the cell(s)
+			::gpk::SImageMonochrome<uint64_t>		cellsMines;
+			::gpk::SImageMonochrome<uint64_t>		cellsHides;
+			if(false == GameState.BlockBased) {
+				gpk_necall(cellsMines.resize(Board.metrics()), "%s", "Out of memory?");
+				gpk_necall(cellsHides.resize(Board.metrics()), "%s", "Out of memory?");
+			}
+			else  {
+				gpk_necall(cellsMines.resize(GameState.BoardSize), "%s", "Out of memory?");
+				gpk_necall(cellsHides.resize(GameState.BoardSize), "%s", "Out of memory?");
+			}
+			const int32_t							totalHides						= GetHides(cellsHides.View);
+			const int32_t							totalMines						= GetMines(cellsMines.View);
+			if(totalHides <= totalMines && false == cellData.Boom)	// Win!
+				GameState.Time.Count							= ::gpk::timeCurrent() - GameState.Time.Offset;
+		}
+		else {
+			GameState.BlastCoord				= cellCoord;
+			GameState.Blast						= true;
+		}
 	}
 	return cellData.Boom ? 1 : 0;
 }
 
-static	::gpk::SCoord2<uint32_t>	getBlockCount				(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
-	return
-		{ boardMetrics.x / blockMetrics.x + one_if(boardMetrics.x % blockMetrics.x)
-		, boardMetrics.y / blockMetrics.y + one_if(boardMetrics.y % blockMetrics.y)
-		};
-}
-
-static	::gpk::SCoord2<uint32_t>	getBlockFromCoord			(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
-	return
-		{ boardMetrics.x / blockMetrics.x
-		, boardMetrics.y / blockMetrics.y
-		};
-}
-
-static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
-	return
-		{ boardMetrics.x % blockMetrics.x
-		, boardMetrics.y % blockMetrics.y
-		};
-}
-
 ::gpk::error_t						btl::SMineBack::Start		(const ::gpk::SCoord2<uint32_t> boardMetrics, const uint32_t mineCount)	{
-	Time.Offset							= ::gpk::timeCurrent();
-	gpk_necall(Board.resize(boardMetrics, {1,}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
-	const ::gpk::SCoord2<uint32_t>			blockCount					= ::getBlockCount(boardMetrics, BLOCK_METRICS);
-	gpk_necall(BoardBlocks.resize(blockCount.x * blockCount.y), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
+	GameState							= {};
+	GameState.BoardSize					= boardMetrics;
+	GameState.MineCount					= mineCount;
+	GameState.Time.Offset				= ::gpk::timeCurrent();
+	if(false == GameState.BlockBased)
+		gpk_necall(Board.resize(boardMetrics, {1,}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
+	else {
+		const ::gpk::SCoord2<uint32_t>			blockCount					= ::getBlockCount(boardMetrics, GameState.BlockSize);
+		gpk_necall(BoardBlocks.resize(blockCount.x * blockCount.y), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
+	}
 	for(uint32_t iMine = 0; iMine < mineCount; ++iMine) {
-		{ // Old small model (deprecated)
+		if(false == GameState.BlockBased) { // Old small model (deprecated)
 			::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
 			::btl::SMineBackCell					* mineData						= &Board[cellPosition.y][cellPosition.x];
 			while(mineData->Mine) {
@@ -136,18 +157,18 @@ static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<ui
 			}
 			mineData->Mine						= true;
 		}
-		{ // Block-based model
+		else { // Block-based model
 			::gpk::SCoord2<uint32_t>				cellPosition					= {rand() % boardMetrics.x, rand() % boardMetrics.y};
-			::gpk::SCoord2<uint32_t>				cellBlock						= getBlockFromCoord(cellPosition, BLOCK_METRICS);
-			cellPosition						= getLocalCoordFromCoord(cellPosition, BLOCK_METRICS);
-			uint32_t								blockIndex						= cellBlock.y * BLOCK_METRICS.x + cellBlock.x;
-			BoardBlocks[blockIndex]->resize(BLOCK_METRICS);
+			::gpk::SCoord2<uint32_t>				cellBlock						= getBlockFromCoord(cellPosition, GameState.BlockSize);
+			cellPosition						= getLocalCoordFromCoord(cellPosition, GameState.BlockSize);
+			uint32_t								blockIndex						= cellBlock.y * GameState.BlockSize.x + cellBlock.x;
+			BoardBlocks[blockIndex]->resize(GameState.BlockSize);
 			::btl::SMineBackCell					* mineData						= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
 			while(mineData->Mine) {
 				cellPosition						= {rand() % boardMetrics.x, rand() % boardMetrics.y};
-				cellBlock							= getBlockFromCoord(cellPosition, BLOCK_METRICS);
-				cellPosition						= getLocalCoordFromCoord(cellPosition, BLOCK_METRICS);
-				blockIndex							= cellBlock.y * BLOCK_METRICS.x + cellBlock.x;
+				cellBlock							= getBlockFromCoord(cellPosition, GameState.BlockSize);
+				cellPosition						= getLocalCoordFromCoord(cellPosition, GameState.BlockSize);
+				blockIndex							= cellBlock.y * GameState.BlockSize.x + cellBlock.x;
 				mineData							= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
 			}
 			mineData->Mine						= true;
@@ -158,35 +179,70 @@ static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<ui
 
 
 ::gpk::error_t						btl::SMineBack::Save			(::gpk::array_pod<char_t> & bytes)	{
-	::gpk::array_pod<byte_t>				rleDecoded						= {};
-	gpk_necall(rleDecoded.append((const char*)&Board.metrics(), sizeof(::gpk::SCoord2<uint32_t>)) , "%s", "Out of memory?");
-	gpk_necall(rleDecoded.append((const char*)Board.Texels.begin(), Board.Texels.size()), "%s", "Out of memory?");
-	gpk_necall(::gpk::rleEncode(rleDecoded, bytes), "%s", "Out of memory?");
-	gpk_necall(bytes.append((const char*)&Time, sizeof(::gpk::SRange<uint64_t>)), "%s", "Out of memory?");
+	if(false == GameState.BlockBased) {
+		::gpk::array_pod<byte_t>				rleDecoded						= {};
+		gpk_necall(rleDecoded.append((const char*)&Board.metrics(), sizeof(::gpk::SCoord2<uint32_t>)) , "%s", "Out of memory?");
+		gpk_necall(rleDecoded.append((const char*)Board.Texels.begin(), Board.Texels.size()), "%s", "Out of memory?");
+		gpk_necall(::gpk::rleEncode(rleDecoded, bytes), "%s", "Out of memory?");
+		gpk_necall(bytes.append((const char*)&GameState.Time, sizeof(::gpk::SRange<uint64_t>)), "%s", "Out of memory?");
+	}
+	else {
+		::gpk::array_pod<byte_t>				rleDecoded						= {};
+		gpk_necall(rleDecoded.append((const char*)&BoardBlocks.size(), sizeof(uint32_t)) , "%s", "Out of memory?");
+		for(uint32_t iBlock = 0; iBlock < BoardBlocks.size(); ++iBlock) {
+			gpk_necall(rleDecoded.append((const char*)&BoardBlocks[iBlock]->metrics(), sizeof(::gpk::SCoord2<uint32_t>)) , "%s", "Out of memory?");
+			gpk_necall(rleDecoded.append((const char*)BoardBlocks[iBlock]->Texels.begin(), BoardBlocks[iBlock]->Texels.size()), "%s", "Out of memory?");
+		}
+		gpk_necall(::gpk::rleEncode(rleDecoded, bytes), "%s", "Out of memory?");
+		gpk_necall(bytes.append((const char*)&GameState, sizeof(::btl::SMineBackState)), "%s", "Out of memory?");
+	}
 	return 0;
 }
 
 ::gpk::error_t						btl::SMineBack::Load			(::gpk::view_const_byte	bytes)	{
-	Time								= *(::gpk::SRange<uint64_t>*)&bytes[bytes.size() - sizeof(::gpk::SRange<uint64_t>)];
-	bytes								= {bytes.begin(), bytes.size() - sizeof(::gpk::SRange<uint64_t>)};
-	::gpk::array_pod<byte_t>				gameStateBytes					= {};
-	gpk_necall(::gpk::rleDecode(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
-	ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
-	::gpk::SCoord2<uint32_t>				boardMetrics					= *(::gpk::SCoord2<uint32_t>*)gameStateBytes.begin();
-	gpk_necall(Board.resize(boardMetrics), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
-	memcpy(Board.View.begin(), &gameStateBytes[sizeof(::gpk::SCoord2<uint32_t>)], Board.View.size());
-
-	// --- The game is already loaded. Now, we need to get a significant return value from the data we just loaded.
-	for(uint32_t y = 0; y < Board.metrics().y; ++y)
-	for(uint32_t x = 0; x < Board.metrics().x; ++x)
-		if(Board.View[y][x].Boom)
+	if(false == GameState.BlockBased) {
+		GameState.Time						= *(::gpk::SRange<uint64_t>*)&bytes[bytes.size() - sizeof(::gpk::SRange<uint64_t>)];
+		bytes								= {bytes.begin(), bytes.size() - sizeof(::gpk::SRange<uint64_t>)};
+		::gpk::array_pod<byte_t>				gameStateBytes					= {};
+		gpk_necall(::gpk::rleDecode(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
+		::gpk::SCoord2<uint32_t>				boardMetrics					= *(::gpk::SCoord2<uint32_t>*)gameStateBytes.begin();
+		gpk_necall(Board.resize(boardMetrics), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
+		memcpy(Board.View.begin(), &gameStateBytes[sizeof(::gpk::SCoord2<uint32_t>)], Board.View.size());
+		// --- The game is already loaded. Now, we need to get a significant return value from the data we just loaded.
+		for(uint32_t y = 0; y < Board.metrics().y; ++y)
+		for(uint32_t x = 0; x < Board.metrics().x; ++x)
+			if(Board.View[y][x].Boom)
+				return 1;
+		::gpk::SImageMonochrome<uint64_t>		cellsMines; gpk_necall(cellsMines.resize(Board.metrics())	, "%s", "Out of memory?");
+		::gpk::SImageMonochrome<uint64_t>		cellsHides; gpk_necall(cellsHides.resize(Board.metrics())	, "%s", "Out of memory?");
+		const uint32_t							totalMines						= GetMines(cellsMines.View);
+		const uint32_t							totalHides						= GetHides(cellsHides.View);
+		::gpk::SImage<uint8_t>					hints;
+		gpk_necall(hints.resize(Board.metrics(), 0), "%s", "");
+		GetHints(hints.View);
+		return (totalHides <= totalMines) ? 2 : 0;
+	}
+	else {
+		GameState							= *(::btl::SMineBackState*)&bytes[bytes.size() - sizeof(::btl::SMineBackState)];
+		bytes								= {bytes.begin(), bytes.size() - sizeof(::btl::SMineBackState)};
+		::gpk::array_pod<byte_t>				gameStateBytes					= {};
+		gpk_necall(::gpk::rleDecode(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		ree_if(gameStateBytes.size() < sizeof(uint32_t), "Invalid game state file format: %s.", "Invalid file size");
+		uint32_t								blockCount						= *(uint32_t*)gameStateBytes.begin();
+		gpk_necall(BoardBlocks.resize(blockCount), "%s", "Corrupt file?");
+		uint32_t								iByteOffset						= sizeof(uint32_t);
+		for(uint32_t iBlock = 0; iBlock < blockCount; ++iBlock) {
+			::gpk::SCoord2<uint32_t>				blockMetrics					= *(::gpk::SCoord2<uint32_t>*)gameStateBytes[iByteOffset];
+			iByteOffset							+= sizeof(::gpk::SCoord2<uint32_t>);
+			gpk_necall(BoardBlocks[iBlock]->resize(blockMetrics), "Out of memory? Board size: {%u, %u}", blockMetrics.x, blockMetrics.y);
+			memcpy(BoardBlocks[iBlock]->View.begin(), &gameStateBytes[iByteOffset + sizeof(::gpk::SCoord2<uint32_t>)], BoardBlocks[iBlock]->View.size());
+			iByteOffset							+= BoardBlocks[iBlock]->View.size();
+		}
+		if(GameState.Blast)
 			return 1;
-	::gpk::SImageMonochrome<uint64_t>		cellsMines; gpk_necall(cellsMines.resize(Board.metrics())	, "%s", "Out of memory?");
-	::gpk::SImageMonochrome<uint64_t>		cellsHides; gpk_necall(cellsHides.resize(Board.metrics())	, "%s", "Out of memory?");
-	const uint32_t							totalMines						= GetMines(cellsMines.View);
-	const uint32_t							totalHides						= GetHides(cellsHides.View);
-	::gpk::SImage<uint8_t>					hints;
-	gpk_necall(hints.resize(Board.metrics(), 0), "%s", "");
-	GetHints(hints.View);
-	return (totalHides <= totalMines) ? 2 : 0;
+		if(GameState.Time.Count)
+			return 2;
+		return 0;
+	}
 }

@@ -154,21 +154,21 @@ struct SMineBackOutputSymbols {
 	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 
-	sprintf_s(temp, "%llu", gameState.Time.Offset);
+	sprintf_s(temp, "%llu", gameState.GameState.Time.Offset);
 	gpk_necall(output.append(::gpk::view_const_string{",\"time_start\":"}), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-	if(0 < gameState.Time.Count) {
-		sprintf_s(temp, "%llu", gameState.Time.Count);
+	if(0 < gameState.GameState.Time.Count) {
+		sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
 		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-		sprintf_s(temp, "%llu", gameState.Time.Offset + gameState.Time.Count);
+		sprintf_s(temp, "%llu", gameState.GameState.Time.Offset + gameState.GameState.Time.Count);
 		gpk_necall(output.append(::gpk::view_const_string{",\"time_end\":"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-		sprintf_s(temp, "%llu", gameState.Time.Count);
+		sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
 		gpk_necall(output.append(::gpk::view_const_string{",\"play_seconds\":"}), "%s", "Out of memory?");
 	}
 	else {
-		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.Time.Offset);
+		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.GameState.Time.Offset);
 		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
 	}
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
@@ -181,7 +181,7 @@ struct SMineBackOutputSymbols {
 		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	}
-//#define MINESWEEPER_DEBUG
+#define MINESWEEPER_DEBUG
 #if defined(MINESWEEPER_DEBUG)
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsMines.View, output), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(gameState.Board.metrics(), cellsFlags.View, output), "%s", "Out of memory?");
