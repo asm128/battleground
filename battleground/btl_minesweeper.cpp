@@ -86,27 +86,25 @@ static	::gpk::SCoord2<uint32_t>	getLocalCoordFromCoord		(const ::gpk::SCoord2<ui
 	return 0;
 }
 
-static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const ::gpk::SCoord2<int32_t> cell) {
+static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const ::gpk::view_grid<uint8_t> & hints, const ::gpk::SCoord2<int32_t> cell) {
 	::btl::SMineBackCell					* currentCell					= 0;
 	gameState.GetCell(cell.Cast<uint32_t>(), &currentCell);
 	currentCell->Show					= true;
 	const ::gpk::SCoord2<uint32_t>			gridMetrix						= gameState.GameState.BlockBased ? gameState.GameState.BoardSize : gameState.Board.metrics();
-	if(false == gameState.GameState.BlockBased) {
-		::gpk::view_grid<::btl::SMineBackCell>	board							= gameState.Board.View;
-		::gpk::SImage<uint8_t>					hints;
-		hints.resize(gridMetrix);
-		gameState.GetHints(hints.View);
-		if(0 == hints[cell.y][cell.x]) {
-			hints.Texels.clear_pointer();
+	if(0 == hints[cell.y][cell.x]) {
+		if(false == gameState.GameState.BlockBased) {
+			::gpk::view_grid<::btl::SMineBackCell>	board							= gameState.Board.View;
 			::gpk::SCoord2<int32_t>					coordToTest						= {};	// actually by making this uint32_t we could easily change all the conditions to be coordToTest.i < gridMetrix.i. However, I'm too lazy to start optimizing what's hardly the bottleneck
-			coordToTest	= {cell.x - 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x	 , cell.y - 1	};	if(coordToTest.y >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x + 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x - 1, cell.y		};	if(coordToTest.x >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x + 1, cell.y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x - 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x	 , cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
-			coordToTest	= {cell.x + 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x - 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x >= 0)										{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x	 , cell.y - 1	};	if(coordToTest.y >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x + 1, cell.y - 1	};	if(coordToTest.y >= 0 && coordToTest.x < (int32_t)gridMetrix.x)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x - 1, cell.y		};	if(coordToTest.x >= 0)																{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x + 1, cell.y		};	if(coordToTest.x < (int32_t)gridMetrix.x)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x - 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x >= 0)						{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x	 , cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y)											{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+			coordToTest	= {cell.x + 1, cell.y + 1	};	if(coordToTest.y < (int32_t)gridMetrix.y && coordToTest.x < (int32_t)gridMetrix.x)	{ ::btl::SMineBackCell cellToTest = board[coordToTest.y][coordToTest.x]; if(false == cellToTest.Mine && false == cellToTest.Show) gpk_necall(::uncoverCell(gameState, hints, coordToTest), "%s", "Out of memory?"); }
+		} else {
+
 		}
 	}
 	return 0;
@@ -116,15 +114,19 @@ static	::gpk::error_t				uncoverCell						(::btl::SMineBack & gameState, const :
 ::gpk::error_t						btl::SMineBack::Hold			(const ::gpk::SCoord2<uint32_t> cellCoord)	{ ::btl::SMineBackCell * cellData = 0; GetCell(cellCoord, &cellData); if(false == cellData->Show) { cellData->What = !cellData->What; cellData->Flag = false; } return 0; }
 ::gpk::error_t						btl::SMineBack::Step			(const ::gpk::SCoord2<uint32_t> cellCoord)	{ ::btl::SMineBackCell * cellData = 0; GetCell(cellCoord, &cellData);
 	if(false == cellData->Show) {
+		::gpk::SCoord2							boardMetrics				= GameState.BlockBased ? GameState.BoardSize : Board.metrics();
 		if(cellData->Mine && false == cellData->Flag)
 			cellData->Boom						= true;
-		else if(false == cellData->Flag)
-			gpk_necall(::uncoverCell(*this, cellCoord.Cast<int32_t>()), "%s", "Out of memory?");
+		else if(false == cellData->Flag) {
+			::gpk::SImage<uint8_t>					hints;
+			hints.resize(boardMetrics);
+			GetHints(hints.View);
+			gpk_necall(::uncoverCell(*this, hints.View, cellCoord.Cast<int32_t>()), "%s", "Out of memory?");
+		}
 
 		if(false == cellData->Boom) {	// Check if we won after uncovering the cell(s)
 			::gpk::SImageMonochrome<uint64_t>		cellsMines;
 			::gpk::SImageMonochrome<uint64_t>		cellsShows;
-			::gpk::SCoord2							boardMetrics				= GameState.BlockBased ? GameState.BoardSize : Board.metrics();
 			gpk_necall(cellsMines.resize(boardMetrics), "%s", "Out of memory?");
 			gpk_necall(cellsShows.resize(boardMetrics), "%s", "Out of memory?");
 			const int32_t							totalShows						= GetShows(cellsShows.View);
