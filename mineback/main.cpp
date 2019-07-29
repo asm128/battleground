@@ -20,8 +20,8 @@ GPK_CGI_JSON_APP_IMPL();
 	char												nowstr[128]						= {};
 	uint64_t											now								= ::gpk::timeCurrentInUs();
 	sprintf_s(nowstr, "_%.llu", now);
-	gpk_necall(temp.append(::gpk::view_const_string{nowstr})	, "%s", "Out of memory?");
-	::gpk::base64EncodeFS(temp, fileName);
+	gpk_necall(temp.append(::gpk::view_const_string{nowstr}), "%s", "Out of memory?");
+	gpk_necall(::gpk::base64EncodeFS(temp, fileName)		, "%s", "Out of memory?");
 	return 0;
 }
 
@@ -74,12 +74,12 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 }
 
 struct SMineBackOutputSymbols {
-	::gpk::view_const_string			Boom				= "\"B\"";
-	::gpk::view_const_string			What				= "\"?\"";
-	::gpk::view_const_string			Flag				= "\"!\"";
-	::gpk::view_const_string			Hide				= "\"~\"";
-	::gpk::view_const_string			Fail				= "\"f\"";
-	::gpk::view_const_string			Mine				= "\"*\"";
+	::gpk::view_const_string						Boom							= "\"B\"";
+	::gpk::view_const_string						What							= "\"?\"";
+	::gpk::view_const_string						Flag							= "\"!\"";
+	::gpk::view_const_string						Hide							= "\"~\"";
+	::gpk::view_const_string						Fail							= "\"f\"";
+	::gpk::view_const_string						Mine							= "\"*\"";
 };
 
 ::gpk::error_t									output_cell						(const SMineBackOutputSymbols & symbols, const ::btl::SMineBackCell & cellData, const uint8_t cellHint, ::gpk::array_pod<char_t> & output)	{
