@@ -147,10 +147,10 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 		gpk_necall(output.append(::gpk::view_const_string{" <td>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"/minefront.exe/start\">"})	, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <table>"})						, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" id=\"mfront_width\" name=\"width\"	 min=4 max=50	value=32 /></td><td><input type=\"button\" value=\"easy\"	onclick=\"easy();	/*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" id=\"mfront_height\" name=\"height\" min=4 max=50  value=32 /></td><td><input type=\"button\" value=\"medium\"	onclick=\"medium(); /*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" id=\"mfront_mines\" name=\"mines\"	 min=4 max=500	value=64 /></td><td><input type=\"button\" value=\"hard\"	onclick=\"hard();	/*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Start game!\"/></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_width\" name=\"width\"	min=4 max=50	value=32 /></td><td><input style=\"width:120px;\" type=\"button\" value=\"easy\"	onclick=\"easy();	/*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_height\" name=\"height\"	min=4 max=50	value=32 /></td><td><input style=\"width:120px;\" type=\"button\" value=\"medium\"	onclick=\"medium(); /*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_mines\" name=\"mines\"	min=4 max=500	value=64 /></td><td><input style=\"width:120px;\" type=\"button\" value=\"hard\"	onclick=\"hard();	/*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input style=\"width:100%;\" type=\"submit\" value=\"Start game!\"/></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{" </table>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");
@@ -188,19 +188,19 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 				int8_t attempts	= 4;
 				while((--attempts) > 0) {
 					backendResponse.clear();
-					jsonResponse = {};
+					jsonResponse						= {};
 					::cgiRelay(runtimeValues, backendAddress, backendResponse);
 					::gpk::error_t				offsetBody = ::gpk::find_sequence_pod(::gpk::view_const_string{"\r\n\r\n"}, {backendResponse.begin(), backendResponse.size()});
 					if(0 > offsetBody) {
-						offsetBody				= ::gpk::find_sequence_pod(::gpk::view_const_string{"\r\r\n\r\r\n"}, {backendResponse.begin(), backendResponse.size()});
+						offsetBody							= ::gpk::find_sequence_pod(::gpk::view_const_string{"\r\r\n\r\r\n"}, {backendResponse.begin(), backendResponse.size()});
 						if(0 > offsetBody)
-							offsetBody				= 0;
+							offsetBody							= 0;
 						else
-							offsetBody				+= 6;
+							offsetBody							+= 6;
 					}
 					else
-						offsetBody				+= 4;
-					responseBody			= {&backendResponse[offsetBody], backendResponse.size() - offsetBody};
+						offsetBody							+= 4;
+					responseBody						= {&backendResponse[offsetBody], backendResponse.size() - offsetBody};
 					if errored(::gpk::jsonParse(jsonResponse, responseBody)) {
 						if(attempts == 1) {
 							output							= ::gpk::view_const_string{"Content-type: text/html\r\nCache-Control: no-cache\r\n\r\n <html><body>Failed to parse JSON response from backend service."};
@@ -274,8 +274,15 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 			gpk_necall(::gpk::jsonExpressionResolve("time_elapsed", jsonResponse, 0, strTimeElapsed), "%s", "time_elapsed not found in backend response.");
 			::gpk::view_const_string			strWon						= {};
 			gpk_necall(::gpk::jsonExpressionResolve("won", jsonResponse, 0, strWon), "%s", "time_elapsed not found in backend response.");
+			::gpk::view_const_string			strMines						= {};
+			gpk_necall(::gpk::jsonExpressionResolve("mine_count", jsonResponse, 0, strMines), "%s", "time_elapsed not found in backend response.");
 
 			gpk_necall(output.append(::gpk::view_const_string{" <tr>"})				, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" <td>Mines"})		, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" </td>"})			, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" <td>"})				, "%s", "Out of memory?");
+			gpk_necall(output.append(strMines)										, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" </td>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{" <td>Elapsed time"})	, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{" </td>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{" <td>"})				, "%s", "Out of memory?");
@@ -291,7 +298,7 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 			//uint32_t							timeElapsed					= 0;
 			//::gpk::parseIntegerDecimal(strTimeElapsed, &timeElapsed);
 			gpk_necall(output.append(::gpk::view_const_string{" <tr>"})				, "%s", "Out of memory?");
-			gpk_necall(output.append(::gpk::view_const_string{" <td colspan=4 style=\"text-align:center;\">"})	, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" <td colspan=6 style=\"text-align:center;\">"})	, "%s", "Out of memory?");
 
 			// -- Build the board
 			gpk_necall(output.append(::gpk::view_const_string{"\n<table style=\"border-style:inset;border-color:lightgray;border-width:1px;\">"}), "%s", "Out of memory?");
@@ -368,10 +375,16 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 			gpk_necall(output.append(::gpk::view_const_string{" <td colspan=4>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"/minefront.exe/start\">"})	, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <table>"})						, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" id=\"mfront_width\" name=\"width\"	 min=4 max=50  value=32 /></td><td><input type=\"button\" value=\"easy\"	onclick=\"easy();	\" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" id=\"mfront_height\" name=\"height\" min=4 max=50  value=32 /></td><td><input type=\"button\" value=\"medium\"	onclick=\"medium(); \" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" id=\"mfront_mines\" name=\"mines\"	 min=4 max=500 value=64 /></td><td><input type=\"button\" value=\"hard\"	onclick=\"hard();	\" /></td></tr>"}), "%s", "Out of memory?");	//
-		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Start new game!\"/></td></tr>"}), "%s", "Out of memory?");	//
+		char temp[8192];
+		sprintf_s(temp, "<tr><td>width	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_width\" name=\"width\"	 min=4 max=50  value=%u /></td><td><input style=\"width:120px;\" type=\"button\" value=\"easy\"	onclick=\"easy();	\" /></td></tr>", boardWidth);
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");	//
+		sprintf_s(temp, "<tr><td>height	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_height\" name=\"height\" min=4 max=50  value=%u /></td><td><input style=\"width:120px;\" type=\"button\" value=\"medium\"	onclick=\"medium(); \" /></td></tr>", boardHeight);
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");	//
+		::gpk::array_pod<char_t> miness = strMines;
+		miness.push_back(0);
+		sprintf_s(temp, "<tr><td>mines	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_mines\" name=\"mines\"	 min=4 max=500 value=%s /></td><td><input style=\"width:120px;\" type=\"button\" value=\"hard\"	onclick=\"hard();	\" /></td></tr>", miness.begin());
+		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");	//
+		gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input style=\"width:100%;\" type=\"submit\" value=\"Start new game!\"/></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{" </table>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");

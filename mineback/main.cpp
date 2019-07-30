@@ -149,6 +149,9 @@ struct SMineBackOutputSymbols {
 	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 
+	sprintf_s(temp, "%u", gameState.GameState.MineCount);
+	gpk_necall(output.append(::gpk::view_const_string{",\"mine_count\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	sprintf_s(temp, "%llu", gameState.GameState.Time.Offset);
 	gpk_necall(output.append(::gpk::view_const_string{",\"time_start\":"}), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
@@ -158,9 +161,9 @@ struct SMineBackOutputSymbols {
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 		sprintf_s(temp, "%llu", gameState.GameState.Time.Offset + gameState.GameState.Time.Count);
 		gpk_necall(output.append(::gpk::view_const_string{",\"time_end\":"}), "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
-		sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{",\"play_seconds\":"}), "%s", "Out of memory?");
+		//gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
+		//sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
+		//gpk_necall(output.append(::gpk::view_const_string{",\"play_seconds\":"}), "%s", "Out of memory?");
 	}
 	else {
 		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.GameState.Time.Offset);
