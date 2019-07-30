@@ -364,7 +364,7 @@ struct SActionResult {
 	if (isCGIEnviron) {
 		gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\nCache-Control: no-cache\r\n"}), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"\r\n"})								, "%s", "Out of memory?");
-		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST"};
+		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST", "get", "post"};
 		gpk_necall(::gpk::environmentBlockViews(runtimeValues.EntryPointArgs.EnvironmentBlock, environViews), "%s", "If this breaks, we better know ASAP.");
 		if(0 == ::gpk::keyValVerify(environViews, "REQUEST_METHOD", allowedMethods)) {
 			gpk_necall(output.append(STR_RESPONSE_METHOD_INVALID), "%s", "Out of memory?");

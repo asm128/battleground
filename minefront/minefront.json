@@ -4,7 +4,7 @@
 	,	"http_port"			: "80"
 	//,	"https_address"		: "201.235.131.233"
 	//,	"https_port"		: "443"
-	//,	"udp_lan_address"	: "201.235.131.233"
-	//,	"udp_lan_port"		: "15567"
+	,	"udp_lan_address"	: "192.168.0.2"
+	,	"udp_lan_port"		: "9797"
 	}
 }
