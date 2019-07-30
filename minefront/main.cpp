@@ -297,6 +297,17 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 
 			gpk_necall(output.append(::gpk::view_const_string{"\n</td>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})			, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" <tr>"})						, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{" <td colspan=4>"})						, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"/minefront.exe/start\">"})	, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input type=\"number\" name=\"width\"  min=10 max=50  value=32 /></td></tr>"}), "%s", "Out of memory?");	//
+			gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input type=\"number\" name=\"height\" min=10 max=50  value=32 /></td></tr>"}), "%s", "Out of memory?");	//
+			gpk_necall(output.append(::gpk::view_const_string{"<tr><td>mines	</td><td><input type=\"number\" name=\"mines\"  min=10 max=500 value=128 /></td></tr>"}), "%s", "Out of memory?");	//
+			gpk_necall(output.append(::gpk::view_const_string{"<tr><td colspan=2><input type=\"submit\" value=\"Restart game!\"/></td></tr>"}), "%s", "Out of memory?");	//
+			gpk_necall(output.append(::gpk::view_const_string{"</form>"})					, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"</td>"})						, "%s", "Out of memory?");
+			gpk_necall(output.append(::gpk::view_const_string{"</tr>"})						, "%s", "Out of memory?");
+
 			::gpk::tcpipShutdown();
 		}
 	}
