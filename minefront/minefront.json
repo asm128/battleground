@@ -1,6 +1,11 @@
 {
+	"minefront"	:
+	{	"http_domain"		: "asm128.com"
+	,	"http_path"			: "/minefront.exe"
+	},
 	"mineback"	:
-	{	"http_address"		: "201.235.131.233"
+	{	"http_domain"		: "asm128.com"
+	,	"http_path"			: "/mineback.exe"
 	,	"http_port"			: "80"
 	//,	"https_address"		: "201.235.131.233"
 	//,	"https_port"		: "443"

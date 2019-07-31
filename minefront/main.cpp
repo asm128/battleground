@@ -142,10 +142,24 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 	gpk_necall(output.append(::gpk::view_const_string{"</head>"})						, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{" <body>"})						, "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{" <table>"})						, "%s", "Out of memory?");
-	if(0 == requestReceived.QueryString.size()) { // Just print the main form.
+	::gpk::SJSONFile						config						= {};
+	const char								configFileName	[]			= "./minefront.json";
+	gpk_necall(::gpk::jsonFileRead(config, configFileName), "Failed to load configuration file: %s.", configFileName);
+
+	::gpk::view_const_string				minefrontDomain				= {};
+	::gpk::view_const_string				minefrontPath				= {};
+	gpk_necall(::gpk::jsonExpressionResolve("minefront.http_domain"	, config.Reader, 0, minefrontDomain	), "Backend address not found in config file: %s.", configFileName);
+	gpk_necall(::gpk::jsonExpressionResolve("minefront.http_path"	, config.Reader, 0, minefrontPath	), "Backend address not found in config file: %s.", configFileName);
+	::gpk::array_pod<char_t>				strHttpPath					= minefrontDomain;
+	strHttpPath.append(minefrontPath);
+	strHttpPath.push_back(0);
+
+	if(0 == requestReceived.QueryString.size() || requestReceived.QueryStringKeyVals.size() < 3) { // Just print the main form.
 		gpk_necall(output.append(::gpk::view_const_string{" <tr>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <td>"})						, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"/minefront.exe/start\">"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"http://"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(strHttpPath.begin(), strHttpPath.size()-1), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"/start\">"})	, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <table>"})						, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>width	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_width\" name=\"width\"	min=4 max=100	value=32 /></td><td><input style=\"width:120px;\" type=\"button\" value=\"easy\"	onclick=\"easy();	/*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
 		gpk_necall(output.append(::gpk::view_const_string{"<tr><td>height	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_height\" name=\"height\"	min=4 max=100	value=32 /></td><td><input style=\"width:120px;\" type=\"button\" value=\"medium\"	onclick=\"medium(); /*submit();*/\" /></td></tr>"}), "%s", "Out of memory?");	//
@@ -160,9 +174,9 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 		::gpk::SCoord2<uint32_t>				boardMetrics				= {10, 10};
 		::gpk::view_const_string				idGame						= {};
 		::gpk::find("game_id"	, requestReceived.QueryStringKeyVals, idGame);
-		::gpk::SJSONFile						config						= {};
-		const char								configFileName	[]			= "./minefront.json";
-		gpk_necall(::gpk::jsonFileRead(config, configFileName), "Failed to load configuration file: %s.", configFileName);
+
+		::gpk::view_const_string				httpPath					= {};
+		gpk_necall(::gpk::jsonExpressionResolve("mineback.http_path", config.Reader, 0, httpPath), "Backend address not found in config file: %s.", configFileName);
 		{
 			::gpk::SJSONReader						jsonResponse;
 			::gpk::SIPv4							backendAddress				= {};
@@ -178,14 +192,14 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 			else {
 				::gpk::view_const_string				backendIpString				= {};
 				::gpk::view_const_string				backendPortString			= {};
-				gpk_necall(::gpk::jsonExpressionResolve("mineback.http_address"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
+				gpk_necall(::gpk::jsonExpressionResolve("mineback.http_domain"	, config.Reader, 0, backendIpString), "Backend address not found in config file: %s.", configFileName);
 				gpk_necall(::gpk::jsonExpressionResolve("mineback.http_port"	, config.Reader, 0, backendPortString), "Backend address not found in config file: %s.", configFileName);
 				gpk_necall(::gpk::tcpipAddress(backendIpString, backendPortString, backendAddress), "%s", "Cannot resolve host.");
 			}
 			::gpk::array_pod<char_t>				backendResponse				= {};
 			::gpk::view_const_string				responseBody				= {};
 			if(0 <= indexNodeUdpLanIp) {
-				int8_t attempts	= 4;
+				int8_t									attempts					= 5;
 				while((--attempts) > 0) {
 					backendResponse.clear();
 					jsonResponse						= {};
@@ -202,7 +216,7 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 						offsetBody							+= 4;
 					responseBody						= {&backendResponse[offsetBody], backendResponse.size() - offsetBody};
 					if errored(::gpk::jsonParse(jsonResponse, responseBody)) {
-						if(attempts == 1) {
+						if(attempts == 0) {
 							output							= ::gpk::view_const_string{"Content-type: text/html\r\nCache-Control: no-cache\r\n\r\n <html><body>Failed to parse JSON response from backend service."};
 							output.append(::gpk::view_const_string{"<code>"});
 							output.append(::gpk::view_const_string{backendResponse.begin(), (uint32_t)-1});
@@ -216,6 +230,7 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 
 				}
 			} else {
+				::gpk::array_pod<char>					temp					= httpPath;
 				if(idGame.size()) {
 					::gpk::view_const_string				actionName				= {};
 					::gpk::view_const_string				actionX					= {};
@@ -223,7 +238,7 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 					::gpk::find("x"			, requestReceived.QueryStringKeyVals, actionX		);
 					::gpk::find("y"			, requestReceived.QueryStringKeyVals, actionY		);
 					::gpk::find("name"		, requestReceived.QueryStringKeyVals, actionName	);
-					::gpk::array_pod<char>					temp					= ::gpk::view_const_string{"/mineback.exe/action?x="};
+					gpk_necall(temp.append(::gpk::view_const_string{"/action?x="}), "%s", "Out of memory?");
 					gpk_necall(temp.append(actionX)									, "%s", "Out of memory?");
 					gpk_necall(temp.append(::gpk::view_const_string{"&y="})			, "%s", "Out of memory?");
 					gpk_necall(temp.append(actionY)									, "%s", "Out of memory?");
@@ -231,7 +246,7 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 					gpk_necall(temp.append(actionName)								, "%s", "Out of memory?");
 					gpk_necall(temp.append(::gpk::view_const_string{"&game_id="})	, "%s", "Out of memory?");
 					gpk_necall(temp.append(idGame)									, "%s", "Out of memory?");
-					gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", {temp.begin(), temp.size()}, "", "", backendResponse), "Cannot connect to backend service.");
+					gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, minefrontDomain, {temp.begin(), temp.size()}, "", "", backendResponse), "Cannot connect to backend service.");
 				}
 				else {
 					::gpk::view_const_string				boardWidth					= {};
@@ -240,13 +255,13 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 					::gpk::find("width"		, requestReceived.QueryStringKeyVals, boardWidth	);
 					::gpk::find("height"	, requestReceived.QueryStringKeyVals, boardHeight	);
 					::gpk::find("mines"		, requestReceived.QueryStringKeyVals, boardMines	);
-					if(boardWidth	.size()) ::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
-					if(boardHeight	.size()) ::gpk::parseIntegerDecimal(boardHeight, &boardMetrics.y);
-					uint32_t								mines						= 10;
-					if(boardMines	.size()) ::gpk::parseIntegerDecimal(boardMines, &mines);
-					char									temp[1027]					= {};
-					sprintf_s(temp, "/mineback.exe/start?width=%u&height=%u&mines=%u", boardMetrics.x, boardMetrics.y, mines);
-					gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, "asm128.com", temp, "", "", backendResponse), "Cannot connect to backend service.");
+					gpk_necall(temp.append(::gpk::view_const_string{"/start?width="})	, "%s", "Out of memory?");
+					gpk_necall(temp.append(boardWidth)									, "%s", "Out of memory?");
+					gpk_necall(temp.append(::gpk::view_const_string{"&height="})		, "%s", "Out of memory?");
+					gpk_necall(temp.append(boardHeight)									, "%s", "Out of memory?");
+					gpk_necall(temp.append(::gpk::view_const_string{"&mines="})			, "%s", "Out of memory?");
+					gpk_necall(temp.append(boardMines)									, "%s", "Out of memory?");
+					gpk_necall(::gpk::httpClientRequest(backendAddress, ::gpk::HTTP_METHOD_GET, minefrontDomain, {temp.begin(), temp.size()}, "", "", backendResponse), "Cannot connect to backend service.");
 				}
 				responseBody			= {backendResponse.begin(), backendResponse.size()};
 				if errored(::gpk::jsonParse(jsonResponse, responseBody)) {
@@ -316,12 +331,13 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 					sprintf_s(tempCoord, "%0.3u%0.3u", iColumn, iRow);
 					::gpk::base64EncodeFS(::gpk::view_const_string{tempCoord}, b64Encoded);
 					b64Encoded.push_back(0);
-					sprintf_s(tempScript, "\n<form style=\"padding:0px; margin:0px; width:16px; height:16px; \" method=\"GET\" action=\"http://201.235.131.233/minefront.exe/action\" >"
+					sprintf_s(tempScript, "\n<form style=\"padding:0px; margin:0px; width:16px; height:16px; \" method=\"GET\" action=\"http://%s/action\" >"
 						"<input type=\"hidden\" id=\"%s_name\"		name=\"name\"		value=\"step\" >"
 						"<input type=\"hidden\" id=\"%s_x\"			name=\"x\"			value=\"%u\" >"
 						"<input type=\"hidden\" id=\"%s_x\"			name=\"y\"			value=\"%u\" >"
 						"<input type=\"hidden\" id=\"%s_game_id\"	name=\"game_id\"	value=\"%s\" >"
 						"<input type=\"submit\" id=\"%s\" oncontextmenu=\"cellFlag('%s');submit(); return false;\"  onclick=\"cellClick('%s')\" onmouseout=\"cellOut('%s')\" onmouseover=\"cellOver('%s')\" "
+						, strHttpPath.begin()
 						, b64Encoded.begin()
 						, b64Encoded.begin(), iColumn
 						, b64Encoded.begin(), iRow
@@ -373,7 +389,9 @@ static	int											cgiRelay			(const ::gpk::SCGIRuntimeValues & runtimeValues,
 			gpk_necall(output.append(::gpk::view_const_string{"\n</tr>"})			, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{" <tr>"})						, "%s", "Out of memory?");
 			gpk_necall(output.append(::gpk::view_const_string{" <td colspan=4>"})						, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"/minefront.exe/start\">"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"<form method=\"GET\" action=\"http://"})	, "%s", "Out of memory?");
+		gpk_necall(output.append(strHttpPath.begin(), strHttpPath.size()-1), "%s", "Out of memory?");
+		gpk_necall(output.append(::gpk::view_const_string{"/start\">"})	, "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{" <table>"})						, "%s", "Out of memory?");
 		char temp[8192];
 		sprintf_s(temp, "<tr><td>width	</td><td><input style=\"width:64px;\" type=\"number\" id=\"mfront_width\" name=\"width\"	 min=4 max=100  value=%u /></td><td><input style=\"width:120px;\" type=\"button\" value=\"easy\"	onclick=\"easy();	\" /></td></tr>", boardWidth);
