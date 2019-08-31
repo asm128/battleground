@@ -50,7 +50,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 ::gpk::error_t									output_board_generate			(const ::gpk::SCoord2<uint32_t> & boardMetrics, const ::gpk::view_bit<uint64_t> & cells, ::gpk::array_pod<char_t> & output)	{
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	for(uint32_t row = 0; row < boardMetrics.y; ++row) {
-		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
+		gpk_necall(output.append_string("\n["), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < boardMetrics.x; ++x) {
 			const bool									cell							= cells[row * boardMetrics.x + x];
 			gpk_necall(output.push_back(cell ? '1' : '0'), "%s", "Out of memory?");
@@ -61,7 +61,7 @@ static	const ::gpk::view_const_string			STR_RESPONSE_METHOD_INVALID		= "{ \"stat
 		if(row < (boardMetrics.y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n]"), "%s", "Out of memory?");
 	return 0;
 }
 
@@ -144,36 +144,36 @@ struct SMineBackOutputSymbols {
 //#define ROWS_AS_KEYS
 	gpk_necall(output.push_back('{'), "%s", "Out of memory?");	// Open main object
 
-	gpk_necall(output.append(::gpk::view_const_string{"\"game_id\":"})										, "%s", "Out of memory?");
+	gpk_necall(output.append_string("\"game_id\":")										, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 	gpk_necall(output.append(idGame)																		, "%s", "Out of memory?");
 	gpk_necall(output.push_back('"')																		, "%s", "Out of memory?");
 
 	sprintf_s(temp, "%u", gameState.GameState.MineCount);
-	gpk_necall(output.append(::gpk::view_const_string{",\"mine_count\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append_string(",\"mine_count\":"), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	sprintf_s(temp, "%llu", gameState.GameState.Time.Offset);
-	gpk_necall(output.append(::gpk::view_const_string{",\"time_start\":"}), "%s", "Out of memory?");
+	gpk_necall(output.append_string(",\"time_start\":"), "%s", "Out of memory?");
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 	if(0 < gameState.GameState.Time.Count) {
 		sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append_string(",\"time_elapsed\":"), "%s", "Out of memory?");
 		gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 		sprintf_s(temp, "%llu", gameState.GameState.Time.Offset + gameState.GameState.Time.Count);
-		gpk_necall(output.append(::gpk::view_const_string{",\"time_end\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append_string(",\"time_end\":"), "%s", "Out of memory?");
 		//gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 		//sprintf_s(temp, "%llu", gameState.GameState.Time.Count);
-		//gpk_necall(output.append(::gpk::view_const_string{",\"play_seconds\":"}), "%s", "Out of memory?");
+		//gpk_necall(output.append_string(",\"play_seconds\":"), "%s", "Out of memory?");
 	}
 	else {
 		sprintf_s(temp, "%llu", ::gpk::timeCurrent() - gameState.GameState.Time.Offset);
-		gpk_necall(output.append(::gpk::view_const_string{",\"time_elapsed\":"}), "%s", "Out of memory?");
+		gpk_necall(output.append_string(",\"time_elapsed\":"), "%s", "Out of memory?");
 	}
 	gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 
-	gpk_necall(output.append(::gpk::view_const_string{",\"dead\":"})										, "%s", "Out of memory?");
-	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{",\"won\":"})											, "%s", "Out of memory?");
+	gpk_necall(output.append_string(",\"dead\":")										, "%s", "Out of memory?");
+	gpk_necall(output.append(blast ? ::gpk::view_const_string{"true"} : ::gpk::view_const_string{"false"})	, "%s", "Out of memory?");
+	gpk_necall(output.append_string(",\"won\":")											, "%s", "Out of memory?");
 	gpk_necall(output.append(won ? ::gpk::view_const_string{"true"}: ::gpk::view_const_string{"false"})		, "%s", "Out of memory?");
 	if(blast) {
 		sprintf_s(temp, ", \"blast\":{\"x\":%u,\"y\":%u}", blastCoord.x, blastCoord.y);
@@ -188,14 +188,14 @@ struct SMineBackOutputSymbols {
 	::gpk::SImageMonochrome<uint64_t>					cellsHolds; gpk_necall(cellsHolds.resize(boardMetrics)	, "%s", "Out of memory?");
 	const uint32_t										totalFlags						= gameState.GetFlags(cellsFlags.View);
 	const uint32_t										totalHolds						= gameState.GetHolds(cellsHolds.View);
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"mines\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsMines.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"flags\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsFlags.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"holds\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsHolds.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"shows\":"})	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsShows.View, output), "%s", "Out of memory?");
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"hints\":"})	, "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"mines\":")	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsMines.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"flags\":")	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsFlags.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"holds\":")	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsHolds.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"shows\":")	, "%s", "Out of memory?"); gpk_necall(::output_board_generate(boardMetrics, cellsShows.View, output), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"hints\":")	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	for(uint32_t row = 0; row < boardMetrics.y; ++row) {
-		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
+		gpk_necall(output.append_string("\n["), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < boardMetrics.x; ++x) {
 			const uint8_t										cell							= hints[row][x];
 			gpk_necall(output.push_back('0' + cell), "%s", "Out of memory?");
@@ -206,13 +206,13 @@ struct SMineBackOutputSymbols {
 		if(row < (boardMetrics.y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n]"), "%s", "Out of memory?");
 #endif
-	gpk_necall(output.append(::gpk::view_const_string{"\n,\"board\":"})	, "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n,\"board\":")	, "%s", "Out of memory?");
 	gpk_necall(output.push_back('[')									, "%s", "Out of memory?");
 	::SMineBackOutputSymbols								symbols;
 	for(uint32_t y = 0; y < boardMetrics.y; ++y) {
-		gpk_necall(output.append(::gpk::view_const_string{"\n["}), "%s", "Out of memory?");
+		gpk_necall(output.append_string("\n["), "%s", "Out of memory?");
 		for(uint32_t x = 0; x < boardMetrics.x; ++x) {
 			const ::btl::SMineBackCell							* cellData							= 0;
 			gameState.GetCell({x, y}, &cellData);
@@ -228,7 +228,7 @@ struct SMineBackOutputSymbols {
 		if(y < (boardMetrics.y - 1))
 			gpk_necall(output.push_back(','), "%s", "Out of memory?");
 	}
-	gpk_necall(output.append(::gpk::view_const_string{"\n]"}), "%s", "Out of memory?");
+	gpk_necall(output.append_string("\n]"), "%s", "Out of memory?");
 
 	gpk_necall(output.push_back('}'), "%s", "Out of memory?");	// Close main object
 	return 0;
@@ -297,9 +297,9 @@ struct SActionResult {
 			::gpk::error_t									idxActionCellY						= ::gpk::find("y"	, requestReceived.QueryStringKeyVals, actionCellY)	; (void)idxActionCellY;
 		}
 		else {
-			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
+			gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '")	, "%s", "Out of memory?");
 			gpk_necall(output.append(requestPath)																							, "%s", "Out of memory?");
-			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
+			gpk_necall(output.append_string("'.\" }\r\n")																, "%s", "Out of memory?");
 			return -1;
 		}
 	}
@@ -324,9 +324,9 @@ struct SActionResult {
 	::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 	::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
 	if errored(isGameFinished)	{
-		gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"})	, "%s", "Out of memory?");
+		gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '")	, "%s", "Out of memory?");
 		gpk_necall(output.append(actionResult.IdGame)																								, "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																			, "%s", "Out of memory?");
+		gpk_necall(output.append_string("'.\" }\r\n")																			, "%s", "Out of memory?");
 		return -1;
 	}
 	bool											validCell							= ::gpk::in_range(actionCellCoord, {{}, gameState.GameState.BlockBased ? gameState.GameState.BoardSize : gameState.Board.metrics()});
@@ -345,9 +345,9 @@ struct SActionResult {
 			gpk_necall(::gameStateSave(gameState, actionResult.IdGame), "%s", "Failed to save game state.");
 		}
 		else {
-			gpk_necall(output.append(::gpk::view_const_string{"{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '"})	, "%s", "Out of memory?");
+			gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '")	, "%s", "Out of memory?");
 			gpk_necall(output.append(action)																								, "%s", "Out of memory?");
-			gpk_necall(output.append(::gpk::view_const_string{"'.\" }\r\n"})																, "%s", "Out of memory?");
+			gpk_necall(output.append_string("'.\" }\r\n")																, "%s", "Out of memory?");
 			return -1;
 		}
 	}
@@ -365,11 +365,11 @@ struct SActionResult {
 	bool												isCGIEnviron					= ::gpk::httpRequestInit(requestReceived, runtimeValues, true);
 	::gpk::array_obj<::gpk::TKeyValConstString>			environViews;
 	if (isCGIEnviron) {
-		gpk_necall(output.append(::gpk::view_const_string{"Content-type: application/json\r\nCache-Control: no-cache\r\n"}), "%s", "Out of memory?");
-		gpk_necall(output.append(::gpk::view_const_string{"\r\n"})								, "%s", "Out of memory?");
+		gpk_necall(output.append_string("Content-type: application/json\r\nCache-Control: no-cache\r\n"), "%s", "Out of memory?");
+		gpk_necall(output.append_string("\r\n")								, "%s", "Out of memory?");
 		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST", "get", "post"};
 		gpk_necall(::gpk::environmentBlockViews(runtimeValues.EntryPointArgs.EnvironmentBlock, environViews), "%s", "If this breaks, we better know ASAP.");
-		if(0 == ::gpk::keyValVerify(environViews, "REQUEST_METHOD", allowedMethods)) {
+		if(-1 == ::gpk::keyValVerify(environViews, "REQUEST_METHOD", allowedMethods)) {
 			gpk_necall(output.append(STR_RESPONSE_METHOD_INVALID), "%s", "Out of memory?");
 			return 1;
 		}

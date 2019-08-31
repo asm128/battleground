@@ -2,6 +2,7 @@
 #include "gpk_chrono.h"
 #include "gpk_encoding.h"
 #include "gpk_find.h"
+#include "gpk_deflate.h"
 
 static	::gpk::SCoord2<uint32_t>	getBlockCount				(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
 	return
@@ -93,7 +94,7 @@ static	::gpk::error_t				uncoverCellIfNeeded				(::gpk::view_grid<::btl::SMineBa
 }
 
 static	::gpk::error_t				enqueueCellIfNeeded				(const ::gpk::SCoord2<uint32_t> & cellOffset, const ::gpk::SCoord2<uint32_t> & boardSize, const ::gpk::SCoord2<int32_t> localCellCoord, ::gpk::array_pod<::gpk::SCoord2<uint32_t>> & outOfRangeCells) {
-	const ::gpk::SCoord2<uint32_t> globalCoordToTest = cellOffset + localCellCoord.Cast<uint32_t>();
+	const ::gpk::SCoord2<uint32_t>			globalCoordToTest				= cellOffset + localCellCoord.Cast<uint32_t>();
 	if(::gpk::in_range(globalCoordToTest, {{}, boardSize}) && 0 > ::gpk::find(globalCoordToTest, {outOfRangeCells.begin(), outOfRangeCells.size()}))
 		gpk_necall(outOfRangeCells.push_back(globalCoordToTest), "%s", "Out of memory?");
 	return 0;
@@ -230,7 +231,8 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 				gpk_necall(rleDecoded.append((const char*)BoardBlocks[iBlock]->Texels.begin(), BoardBlocks[iBlock]->Texels.size()), "%s", "Out of memory?");
 			}
 		}
-		gpk_necall(::gpk::rleEncode(rleDecoded, bytes), "%s", "Out of memory?");
+		gpk_necall(::gpk::arrayDeflate(rleDecoded, bytes), "%s", "Out of memory?");
+		info_printf("Game state saved. State size: %u. Deflated: %u.", rleDecoded.size(), bytes.size());
 		gpk_necall(bytes.append((const char*)&GameState, sizeof(::btl::SMineBackState)), "%s", "Out of memory?");
 	}
 	return 0;
@@ -241,7 +243,8 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 		GameState.Time						= *(::gpk::SRange<uint64_t>*)&bytes[bytes.size() - sizeof(::gpk::SRange<uint64_t>)];
 		bytes								= {bytes.begin(), bytes.size() - sizeof(::gpk::SRange<uint64_t>)};
 		::gpk::array_pod<byte_t>				gameStateBytes					= {};
-		gpk_necall(::gpk::rleDecode(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		gpk_necall(::gpk::arrayInflate(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		info_printf("Game state loaded. State size: %u. Compressed: %u.", gameStateBytes.size(), bytes.size());
 		ree_if(gameStateBytes.size() < sizeof(::gpk::SCoord2<uint32_t>), "Invalid game state file format: %s.", "Invalid file size");
 		const ::gpk::SCoord2<uint32_t>			boardMetrics					= *(::gpk::SCoord2<uint32_t>*)gameStateBytes.begin();
 		gpk_necall(Board.resize(boardMetrics, {}), "Out of memory? Board size: {%u, %u}", boardMetrics.x, boardMetrics.y);
@@ -264,7 +267,8 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 		GameState							= *(::btl::SMineBackState*)&bytes[bytes.size() - sizeof(::btl::SMineBackState)];
 		bytes								= {bytes.begin(), bytes.size() - sizeof(::btl::SMineBackState)};
 		::gpk::array_pod<byte_t>				gameStateBytes					= {};
-		gpk_necall(::gpk::rleDecode(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		gpk_necall(::gpk::arrayInflate(bytes, gameStateBytes), "%s", "Out of memory or corrupt data!");
+		info_printf("Game state loaded. State size: %u. Compressed: %u.", gameStateBytes.size(), bytes.size());
 		ree_if(gameStateBytes.size() < sizeof(uint32_t), "Invalid game state file format: %s.", "Invalid file size");
 		uint32_t								iByteOffset						= 0;
 		GameState.BlockSize					= *(const ::gpk::SCoord2<uint32_t>*)&gameStateBytes[iByteOffset];
@@ -293,13 +297,13 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 	if(false == GameState.BlockBased)
 		*out_cell										= &Board[cellCoord.y][cellCoord.x];
 	else {
-		const ::gpk::SCoord2<uint32_t>			cellBlock						= ::getBlockFromCoord(cellCoord, GameState.BlockSize);
-		const ::gpk::SCoord2<uint32_t>			cellPosition					= ::getLocalCoordFromCoord(cellCoord, GameState.BlockSize);
-		const ::gpk::SCoord2<uint32_t>			blockCount						= ::getBlockCount(GameState.BoardSize, GameState.BlockSize);
-		const uint32_t							blockIndex						= cellBlock.y * blockCount.x + cellBlock.x;
+		const ::gpk::SCoord2<uint32_t>						cellBlock							= ::getBlockFromCoord(cellCoord, GameState.BlockSize);
+		const ::gpk::SCoord2<uint32_t>						cellPosition						= ::getLocalCoordFromCoord(cellCoord, GameState.BlockSize);
+		const ::gpk::SCoord2<uint32_t>						blockCount							= ::getBlockCount(GameState.BoardSize, GameState.BlockSize);
+		const uint32_t										blockIndex							= cellBlock.y * blockCount.x + cellBlock.x;
 		if(0 == BoardBlocks[blockIndex])
 			BoardBlocks[blockIndex]->resize(GameState.BlockSize, {});
-		*out_cell							= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
+		*out_cell										= &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
 	}
 	return 0;
 }
@@ -309,11 +313,11 @@ static	::gpk::error_t				uncoverCell						(::gpk::view_grid<::btl::SMineBackCell
 	if(false == GameState.BlockBased)
 		*out_cell										= &Board[cellCoord.y][cellCoord.x];
 	else {
-		const ::gpk::SCoord2<uint32_t>			cellBlock						= ::getBlockFromCoord(cellCoord, GameState.BlockSize);
-		const ::gpk::SCoord2<uint32_t>			cellPosition					= ::getLocalCoordFromCoord(cellCoord, GameState.BlockSize);
-		const ::gpk::SCoord2<uint32_t>			blockCount						= ::getBlockCount(GameState.BoardSize, GameState.BlockSize);
-		const uint32_t							blockIndex						= cellBlock.y * blockCount.x + cellBlock.x;
-		*out_cell							= (0 == BoardBlocks[blockIndex]) ? 0 : &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
+		const ::gpk::SCoord2<uint32_t>						cellBlock							= ::getBlockFromCoord(cellCoord, GameState.BlockSize);
+		const ::gpk::SCoord2<uint32_t>						cellPosition						= ::getLocalCoordFromCoord(cellCoord, GameState.BlockSize);
+		const ::gpk::SCoord2<uint32_t>						blockCount							= ::getBlockCount(GameState.BoardSize, GameState.BlockSize);
+		const uint32_t										blockIndex							= cellBlock.y * blockCount.x + cellBlock.x;
+		*out_cell										= (0 == BoardBlocks[blockIndex]) ? 0 : &(*BoardBlocks[blockIndex])[cellPosition.y][cellPosition.x];
 	}
 	return 0;
 }
