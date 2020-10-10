@@ -12,7 +12,7 @@
 
 GPK_CGI_JSON_APP_IMPL();
 
-::gpk::error_t									gameStateId						(::gpk::array_pod<char_t> & fileName, const ::gpk::view_const_string & ip, const ::gpk::view_const_string & port)	{
+::gpk::error_t									gameStateId						(::gpk::array_pod<char_t> & fileName, const ::gpk::view_const_char & ip, const ::gpk::view_const_char & port)	{
 	::gpk::array_pod<char_t>							temp;
 	gpk_necall(temp.append(ip)		, "%s", "Out of memory?");
 	gpk_necall(temp.push_back('_')	, "%s", "Out of memory?");
@@ -20,7 +20,7 @@ GPK_CGI_JSON_APP_IMPL();
 	char												nowstr[128]						= {};
 	uint64_t											now								= ::gpk::timeCurrentInUs();
 	sprintf_s(nowstr, "_%.llu", now);
-	gpk_necall(temp.append(::gpk::view_const_string{nowstr}), "%s", "Out of memory?");
+	gpk_necall(temp.append(::gpk::view_const_char{nowstr}), "%s", "Out of memory?");
 	gpk_necall(::gpk::base64EncodeFS(temp, fileName)		, "%s", "Out of memory?");
 	return 0;
 }
@@ -255,9 +255,9 @@ struct SActionResult {
 			::gpk::view_const_string						boardWidth						= {};
 			::gpk::view_const_string						boardHeigth						= {};
 			::gpk::view_const_string						mineCount						= {};
-			::gpk::find(::gpk::view_const_string{"width"	}, requestReceived.QueryStringKeyVals, boardWidth	);
-			::gpk::find(::gpk::view_const_string{"height"	}, requestReceived.QueryStringKeyVals, boardHeigth	);
-			::gpk::find(::gpk::view_const_string{"mines"	}, requestReceived.QueryStringKeyVals, mineCount	);
+			::gpk::find(::gpk::vcs{"width"	}, requestReceived.QueryStringKeyVals, boardWidth	);
+			::gpk::find(::gpk::vcs{"height"	}, requestReceived.QueryStringKeyVals, boardHeigth	);
+			::gpk::find(::gpk::vcs{"mines"	}, requestReceived.QueryStringKeyVals, mineCount	);
 			::gpk::SCoord2<uint32_t>						boardMetrics					= {};
 			::gpk::parseIntegerDecimal(boardWidth , &boardMetrics.x);
 			::gpk::parseIntegerDecimal(boardHeigth, &boardMetrics.y);
@@ -287,14 +287,14 @@ struct SActionResult {
 			return 0;
 		}
 		else if(::gpk::view_const_string{"action"} ==	requestPath) {
-			if errored(::gpk::find("game_id", requestReceived.QueryStringKeyVals, actionResult.IdGame))	{
+			if errored(::gpk::find(::gpk::vcs{"game_id"}, requestReceived.QueryStringKeyVals, actionResult.IdGame))	{
 				static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - 'game_id' element not found in querystring.\" }\r\n";
 				gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
 				return -1;
 			}
-			::gpk::error_t									idxCommandNode						= ::gpk::find("name", requestReceived.QueryStringKeyVals, action)		; (void)idxCommandNode;
-			::gpk::error_t									idxActionCellX						= ::gpk::find("x"	, requestReceived.QueryStringKeyVals, actionCellX)	; (void)idxActionCellX;
-			::gpk::error_t									idxActionCellY						= ::gpk::find("y"	, requestReceived.QueryStringKeyVals, actionCellY)	; (void)idxActionCellY;
+			::gpk::error_t									idxCommandNode						= ::gpk::find(::gpk::vcs{"name"	}, requestReceived.QueryStringKeyVals, action)		; (void)idxCommandNode;
+			::gpk::error_t									idxActionCellX						= ::gpk::find(::gpk::vcs{"x"	}, requestReceived.QueryStringKeyVals, actionCellX)	; (void)idxActionCellX;
+			::gpk::error_t									idxActionCellY						= ::gpk::find(::gpk::vcs{"y"	}, requestReceived.QueryStringKeyVals, actionCellY)	; (void)idxActionCellY;
 		}
 		else {
 			gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '")	, "%s", "Out of memory?");
@@ -311,21 +311,21 @@ struct SActionResult {
 			gpk_necall(output.append(::gpk::view_const_string{temp}), "%s", "Out of memory?");
 			return -1;
 		}
-		if errored(::gpk::jsonExpressionResolve("game_id", requestCommands, 0, actionResult.IdGame))	{
+		if errored(::gpk::jsonExpressionResolve(::gpk::vcs{"game_id"}, requestCommands, 0, actionResult.IdGame))	{
 			static constexpr	const char					responseFormat	[]				= "{ \"status\" : 400, \"description\" :\"Bad Request - 'game_id' element not found in json document.\" }\r\n";
 			gpk_necall(output.append(::gpk::view_const_string{responseFormat}), "%s", "Out of memory?");
 			return -1;
 		}
-		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve("action.name", requestCommands, 0, action)		; (void)idxCommandNode;
-		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve("action.x"	, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
-		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve("action.y"	, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
+		::gpk::error_t									idxCommandNode						= ::gpk::jsonExpressionResolve(::gpk::vcs{"action.name" }, requestCommands, 0, action)		; (void)idxCommandNode;
+		::gpk::error_t									idxActionCellX						= ::gpk::jsonExpressionResolve(::gpk::vcs{"action.x"	}, requestCommands, 0, actionCellX)	; (void)idxActionCellX;
+		::gpk::error_t									idxActionCellY						= ::gpk::jsonExpressionResolve(::gpk::vcs{"action.y"	}, requestCommands, 0, actionCellY)	; (void)idxActionCellY;
 	}
 	::gpk::parseIntegerDecimal(actionCellX, &actionCellCoord.x);
 	::gpk::parseIntegerDecimal(actionCellY, &actionCellCoord.y);
 	::gpk::error_t									isGameFinished						= ::gameStateLoad(gameState, actionResult.IdGame);
 	if errored(isGameFinished)	{
-		gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '")	, "%s", "Out of memory?");
-		gpk_necall(output.append(actionResult.IdGame)																								, "%s", "Out of memory?");
+		gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Cannot load state for game_id: '"), "%s", "Out of memory?");
+		gpk_necall(output.append(actionResult.IdGame)																			, "%s", "Out of memory?");
 		gpk_necall(output.append_string("'.\" }\r\n")																			, "%s", "Out of memory?");
 		return -1;
 	}
@@ -346,7 +346,7 @@ struct SActionResult {
 		}
 		else {
 			gpk_necall(output.append_string("{ \"status\" : 400, \"description\" :\"Bad Request - Invalid command: '")	, "%s", "Out of memory?");
-			gpk_necall(output.append(action)																								, "%s", "Out of memory?");
+			gpk_necall(output.append(action)																			, "%s", "Out of memory?");
 			gpk_necall(output.append_string("'.\" }\r\n")																, "%s", "Out of memory?");
 			return -1;
 		}
@@ -367,7 +367,10 @@ struct SActionResult {
 	if (isCGIEnviron) {
 		gpk_necall(output.append_string("Content-type: application/json\r\nCache-Control: no-cache\r\n"), "%s", "Out of memory?");
 		gpk_necall(output.append_string("\r\n")								, "%s", "Out of memory?");
-		const ::gpk::view_const_string						allowedMethods	[]				= {"GET", "POST", "get", "post"};
+		const ::gpk::view_const_char						allowedMethods	[]				=
+			{ ::gpk::vcs{"GET"}
+			, ::gpk::vcs{"POST"}
+			};
 		gpk_necall(::gpk::environmentBlockViews(runtimeValues.EntryPointArgs.EnvironmentBlock, environViews), "%s", "If this breaks, we better know ASAP.");
 		if(-1 == ::gpk::keyValVerify(environViews, "REQUEST_METHOD", allowedMethods)) {
 			gpk_necall(output.append(STR_RESPONSE_METHOD_INVALID), "%s", "Out of memory?");
