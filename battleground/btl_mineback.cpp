@@ -1,7 +1,6 @@
 #include "btl_mineback.h"
 #include "gpk_chrono.h"
 #include "gpk_encoding.h"
-#include "gpk_find.h"
 #include "gpk_deflate.h"
 
 static	::gpk::SCoord2<uint32_t>	getBlockCount				(const ::gpk::SCoord2<uint32_t> boardMetrics, const ::gpk::SCoord2<uint32_t> blockMetrics)	{
